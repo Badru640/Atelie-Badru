@@ -1,0 +1,20 @@
+# Dependências
+node_modules/
+pnpm-lock.yaml
+yarn.lock
+
+# Build
+dist/
+build/
+
+# IDEs
+.vscode/
+.idea/
+
+# Ambiente
+.env
+.env.local
+
+# Sistema
+.DS_Store
+Thumbs.db
