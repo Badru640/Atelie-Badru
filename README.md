@@ -61,7 +61,7 @@ Este projeto permite:
 
 ```bash
 # Clone este repositório
-git clone https://github.com/seu-usuario/atelie-badru.git
+https://github.com/Badru640/Invite-System.git
 
 # Acesse a pasta do projeto
 cd atelie-badru
