@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MessageForm } from '../components/guest/formguest';
 import { WelcomeScreen } from '../components/guest/welcome';
 import InviteLocations from '../components/guest/location';
+import toast from 'react-hot-toast';
 
 const API = "https://script.google.com/macros/s/AKfycbyHOxm1npJxrDj-m7wCqoV1Z1l6scN2MM1eEb9lJS3fRqrJ7rWBGdVcBs1MQ2QzWJpt/exec";
 
@@ -79,27 +80,32 @@ export const GuestPage: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [step]);
 
-  const handleConfirm = async () => {
-    if (!id || !guest) return;
-    setLoadingConfirm(true);
-    try {
-      await fetch(API, {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'confirmAttendance',
-          id,
-          dedicatória_para: guest.dedicatória_para || '',
-          comentário1: guest.comentário1 || '',
-          comentário2: guest.comentário2 || '',
-        }),
-      });
-      await refetch();
-    } catch {
-      alert('Erro ao confirmar presença.');
-    } finally {
-      setLoadingConfirm(false);
-    }
-  };
+
+const handleConfirm = async () => {
+  if (!id || !guest) return;
+
+  setLoadingConfirm(true);
+  try {
+    await fetch(API, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'confirmAttendance',
+        id,
+        dedicatória_para: guest.dedicatória_para || '',
+        comentário1: guest.comentário1 || '',
+        comentário2: guest.comentário2 || '',
+      }),
+    });
+
+    await refetch();
+    toast.success('Presença confirmada com sucesso! 💖');
+  } catch {
+    toast.error('Erro ao confirmar. Por favor, tente novamente mais tarde.');
+  } finally {
+    setLoadingConfirm(false);
+  }
+};
+
 
   if (isLoading || !guest) return <p className="p-4 text-center text-gray-700 font-serif">Carregando convite...</p>;
 
