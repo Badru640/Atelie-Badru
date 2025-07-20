@@ -47,13 +47,14 @@ Este projeto permite:
 
 ## 🔗 Rotas principais
 
-| Caminho               | Descrição                                      |
-|------------------------|-----------------------------------------------|
-| `/`                   | Boas-vindas com introdução animada e fotos     |
-| `/convidado/:id`      | Página personalizada do convidado              |
-| `/admin`              | Área administrativa com listagem e edição      |
-| `/admin/:id`          | Visualizar/editar detalhes do convidado        |
-| `/protocolo`          | Marcar chegada dos convidados no evento        |
+| Caminho                | Descrição                                        |
+|------------------------|--------------------------------------------------|
+| `/`                    | Boas-vindas com introdução animada e fotos       |
+| `/convidado/:id`       | Página personalizada do convidado                |
+| `/admin`               | Área administrativa com listagem e edição        |
+| `/admin/:id`           | Visualizar/editar detalhes do convidado          |
+| `/protocolo`           | Área de check-in de convidados (modo geral)      |
+| `/protocolo/:id`       | Check-in direto de um convidado via QR ou ID     |
 
 ---
 
@@ -61,10 +62,10 @@ Este projeto permite:
 
 ```bash
 # Clone este repositório
-https://github.com/Badru640/Invite-System.git
+https://github.com/Badru640/Atelie-Badru.git
 
 # Acesse a pasta do projeto
-cd atelie-badru
+cd Atelie-Badru
 
 # Instale as dependências
 npm install
