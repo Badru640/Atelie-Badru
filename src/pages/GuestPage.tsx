@@ -7,6 +7,7 @@ import { MessageForm } from '../components/guest/formguest';
 import { WelcomeScreen } from '../components/guest/welcome';
 import InviteLocations from '../components/guest/location';
 import toast from 'react-hot-toast';
+import LoadingScreen from '../components/loading';
 
 const API = "https://script.google.com/macros/s/AKfycbyHOxm1npJxrDj-m7wCqoV1Z1l6scN2MM1eEb9lJS3fRqrJ7rWBGdVcBs1MQ2QzWJpt/exec";
 
@@ -107,7 +108,7 @@ const handleConfirm = async () => {
 };
 
 
-  if (isLoading || !guest) return <p className="p-4 text-center text-gray-700 font-serif">Carregando convite...</p>;
+  if (isLoading || !guest) return <p className="p-4 text-center text-gray-700 font-serif"><LoadingScreen/></p>;
 
   const hasConfirmed = guest.confirmou === 'sim';
 
