@@ -16,30 +16,33 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
         });
       }
     };
-
+  
     const handleOnline = () => {
       if (toastId.current) {
         toast.dismiss(toastId.current);
         toastId.current = null;
-        toast.success('Conexão restabelecida');
+  
+        // Mostra o toast de reconexão temporariamente
+        toast.success('Conexão restabelecida', {
+          duration: 4000,
+        });
       }
     };
-
-    // Checa imediatamente no carregamento
+  
     if (!navigator.onLine) {
       handleOffline();
     }
-
-    // Adiciona os listeners
+  
     window.addEventListener('offline', handleOffline);
     window.addEventListener('online', handleOnline);
-
-    // Limpa ao desmontar
+  
     return () => {
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('online', handleOnline);
     };
   }, []);
+  
+
 
   return (
     <div className="min-h-screen bg-white">

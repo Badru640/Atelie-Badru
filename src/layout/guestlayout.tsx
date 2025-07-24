@@ -42,7 +42,7 @@ const GuestLayout = ({ children }: { children: React.ReactNode }) => {
   
 
   return (
-    <div className="min-h-screen bg-pink-50">
+    <div className="min-h-screen bg-white">
       <Header role="guest" />
       <main>{children}</main>
     </div>

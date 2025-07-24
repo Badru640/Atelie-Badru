@@ -22,7 +22,7 @@ const Header: React.FC<HeaderProps> = ({ role }) => {
   const roleColor = {
     admin: 'bg-rose-700 text-white',
     protocolo: 'bg-rose-600 text-white',
-    guest: 'bg-white text-rose-500 border-b border-rose-200',
+    guest: 'bg-[#fefefe] text-rose-500 border-b border-rose-200',
   };
   const buttonStyle =
   role === 'guest'

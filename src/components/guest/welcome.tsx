@@ -10,7 +10,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ guestName, onViewI
   const scrollRef = useRef<HTMLDivElement>(null);
   const [hasUnveiled, setHasUnveiled] = useState(false);
   const [stopBackgroundAnimations, setStopBackgroundAnimations] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(0); // Novo estado para o índice da imagem ativa
+  const [activeIndex, setActiveIndex] = useState(0); // Estado para o índice da imagem ativa
   const prefersReducedMotion = useReducedMotion();
 
   // Memoize sound playing function to prevent re-creation on re-renders
@@ -125,50 +125,60 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ guestName, onViewI
     "https://images.unsplash.com/photo-1533503525540-8b1c4b7b2f6b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&h=533&q=75",
   ]), []);
 
-  // Function to scroll to a specific image index
+  // Função para rolar para uma imagem específica E ATUALIZAR O activeIndex
   const scrollToImage = useCallback((index: number) => {
     if (scrollRef.current) {
       const firstImageElement = scrollRef.current.querySelector('.flex-shrink-0') as HTMLElement;
-      const imageWidth = firstImageElement?.offsetWidth || 0;
-      const gap = window.innerWidth >= 640 ? 16 : 8;
+      if (!firstImageElement) return; // Garante que o elemento existe
+
+      const imageWidth = firstImageElement.offsetWidth;
+      // Calcula o gap baseado nos seus breakpoints do Tailwind
+      const gap = window.innerWidth >= 640 ? 16 : 8; // sm:space-x-4 é 16px, space-x-2 é 8px
       const scrollPosition = index * (imageWidth + gap);
+
       scrollRef.current.scrollTo({ left: scrollPosition, behavior: 'smooth' });
+      setActiveIndex(index); // <--- ATUALIZA AQUI O ÍNDICE ATIVO AO CLICAR NA BOLINHA
     }
   }, []);
 
-  // Effect to update activeIndex on scroll
-  // This hook correctly handles the scroll event listener
+
+  // Efeito para atualizar activeIndex na rolagem manual
   useEffect(() => {
-    const handleScroll = () => {
-      if (scrollRef.current) {
-        const scrollLeft = scrollRef.current.scrollLeft;
-        const firstImageElement = scrollRef.current.querySelector('.flex-shrink-0');
-        const imageWidth = (firstImageElement as HTMLElement)?.offsetWidth || 0;
-        const gap = window.innerWidth >= 640 ? 16 : 8;
-        const itemWidthWithGap = imageWidth + gap;
+    const currentScrollRef = scrollRef.current; // Captura para o cleanup
+    if (!currentScrollRef) return;
 
-        // Calculate the closest image index based on scroll position
-        if (itemWidthWithGap > 0) { // Avoid division by zero
-            const newIndex = Math.round(scrollLeft / itemWidthWithGap);
-            // Only update state if the index has actually changed
-            if (newIndex !== activeIndex) {
-                setActiveIndex(newIndex);
-            }
-        }
+    // Usando IntersectionObserver para maior precisão na detecção do item ativo
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            // O data-index é adicionado no JSX do motion.div abaixo
+            const index = parseInt(entry.target.getAttribute('data-index') || '0', 10);
+            setActiveIndex(index); // <--- ATUALIZA AQUI O ÍNDICE ATIVO AO ROLAR MANUALMENTE
+          }
+        });
+      },
+      {
+        root: currentScrollRef, // O elemento de rolagem é o root
+        rootMargin: '0px',
+        threshold: 0.7, // Considera o item ativo quando 70% dele está visível
       }
-    };
+    );
 
-    const currentScrollRef = scrollRef.current; // Capture for cleanup
-    currentScrollRef?.addEventListener('scroll', handleScroll);
+    // Observa cada imagem no carrossel
+    Array.from(currentScrollRef.children).forEach((child, index) => {
+      // Adiciona um data-index a cada motion.div para identificar o índice
+      (child as HTMLElement).dataset.index = index.toString();
+      observer.observe(child);
+    });
 
     return () => {
-      // Clean up the event listener when the component unmounts or dependencies change
-      currentScrollRef?.removeEventListener('scroll', handleScroll);
+      // Limpa o observador quando o componente desmonta ou deps mudam
+      Array.from(currentScrollRef.children).forEach((child) => {
+        observer.unobserve(child);
+      });
     };
-  }, [activeIndex]); // Depend on activeIndex to re-run if it changes, though not strictly necessary for listener itself.
-                     // The key is that `handleScroll` uses `activeIndex` from closure,
-                     // but `setActiveIndex` works correctly. We add it to deps for clarity/linting.
-
+  }, [imageUrls]); // Dependência em imageUrls para reconfigurar se as imagens mudarem
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center relative overflow-hidden
@@ -189,20 +199,20 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ guestName, onViewI
           >
             {/* Background sparkle/particle effect */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <AnimatePresence>
-                    {!prefersReducedMotion && !stopBackgroundAnimations && Array.from({ length: 10 }).map((_, i) => (
-                        <motion.div
-                            key={`particle-${i}`}
-                            custom={i}
-                            variants={particleVariants}
-                            initial="initial"
-                            animate="animate"
-                            exit="exit"
-                            className="absolute w-1.5 h-1.5 bg-rose-300 rounded-full"
-                            style={{ top: `${Math.random() * 100}%`, left: `${Math.random() * 100}%` }}
-                        />
-                    ))}
-                </AnimatePresence>
+              <AnimatePresence>
+                {!prefersReducedMotion && !stopBackgroundAnimations && Array.from({ length: 10 }).map((_, i) => (
+                  <motion.div
+                    key={`particle-${i}`}
+                    custom={i}
+                    variants={particleVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    className="absolute w-1.5 h-1.5 bg-rose-300 rounded-full"
+                    style={{ top: `${Math.random() * 100}%`, left: `${Math.random() * 100}%` }}
+                  />
+                ))}
+              </AnimatePresence>
             </div>
 
 
@@ -296,23 +306,23 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ guestName, onViewI
               variants={itemVariants}
               className="text-center max-w-2xl w-full bg-white/85 backdrop-blur-sm rounded-[2.5rem] px-6 py-8 shadow-2xl border-4 border-pink-200 relative overflow-hidden sm:px-8 sm:py-10"
             >
-                {/* Floating rose petals (animated background elements) - using same reliable CDN URL */}
-                <AnimatePresence>
-                    {!prefersReducedMotion && !stopBackgroundAnimations && Array.from({ length: 3 }).map((_, i) => (
-                        <motion.img
-                            key={`petal-${i}`}
-                            src="https://www.svgrepo.com/show/367375/flower-petal.svg"
-                            custom={i}
-                            variants={petalVariants}
-                            initial="initial"
-                            animate="animate"
-                            exit="exit"
-                            className="absolute w-4 h-4 opacity-0 pointer-events-none"
-                            style={{ top: `${Math.random() * 100}%`, left: `${Math.random() * 100}%` }}
-                            width="16" height="16"
-                        />
-                    ))}
-                </AnimatePresence>
+              {/* Floating rose petals (animated background elements) - using same reliable CDN URL */}
+              <AnimatePresence>
+                {!prefersReducedMotion && !stopBackgroundAnimations && Array.from({ length: 3 }).map((_, i) => (
+                  <motion.img
+                    key={`petal-${i}`}
+                    src="https://www.svgrepo.com/show/367375/flower-petal.svg"
+                    custom={i}
+                    variants={petalVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    className="absolute w-4 h-4 opacity-0 pointer-events-none"
+                    style={{ top: `${Math.random() * 100}%`, left: `${Math.random() * 100}%` }}
+                    width="16" height="16"
+                  />
+                ))}
+              </AnimatePresence>
               <p className="text-sm uppercase tracking-widest text-rose-600 font-bold mb-2">
                 Nosso Jardim de Amor
               </p>
@@ -322,26 +332,31 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ guestName, onViewI
               <p className="mt-3 text-base text-gray-700 italic leading-relaxed sm:mt-4 sm:text-lg">
                 Neste pergaminho, desvendamos as pétalas da nossa história, convidando você para florescer conosco no dia mais esperado.
               </p>
+             
               {/* The "Desvendar os Detalhes Mágicos" button */}
-              <motion.div variants={itemVariants} className="w-full flex justify-center mt-8 sm:mt-10">
+              <motion.div variants={itemVariants} className="w-full flex justify-center mt-6 sm:mt-8">
                 <motion.button
-                whileHover={prefersReducedMotion ? {} : { scale: 1.05 }}
-                whileTap={prefersReducedMotion ? {} : { scale: 0.97 }}
-                onClick={onViewInvite}
-                className="bg-gradient-to-r from-rose-600 to-rose-800 text-white text-lg font-semibold px-8 py-3 rounded-full shadow-2xl transition-all duration-300 ease-in-out
+                  whileHover={prefersReducedMotion ? {} : { scale: 1.05 }}
+                  whileTap={prefersReducedMotion ? {} : { scale: 0.97 }}
+                  onClick={onViewInvite}
+                  className="bg-gradient-to-r from-rose-600 to-rose-800 text-white text-lg font-semibold px-8 py-3 rounded-full shadow-2xl transition-all duration-300 ease-in-out
                             hover:from-rose-700 hover:to-rose-900 focus:outline-none focus:ring-4 focus:ring-rose-300 relative overflow-hidden sm:px-12 sm:py-4 sm:text-xl"
                 >
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.5 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.5, duration: 0.5, type: "spring" }}
-                        className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                    >
-                        <svg className="w-7 h-7 text-white/20 sm:w-8 sm:h-8" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd"></path></svg>
-                    </motion.div>
-                    <span className="relative z-10">Desvendar os Detalhes Mágicos</span>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.5, duration: 0.5, type: "spring" }}
+                    className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                  >
+                    <svg className="w-7 h-7 text-white/20 sm:w-8 sm:h-8" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd"></path></svg>
+                  </motion.div>
+                  <span className="relative z-10">Ver Convite</span> {/* Alterado o texto do botão */}
                 </motion.button>
               </motion.div>
+               {/* Texto de indicação para o clique - remova as setas */}
+               <p className="mt-4 text-center text-rose-700 text-sm sm:text-lg font-semibold animate-pulse"> {/* Alterado para animate-pulse */}
+               Clique no botão acima para continuar!
+                             </p>
             </motion.div>
 
             {/* Image carousel with animation and themed borders */}
@@ -351,66 +366,66 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ guestName, onViewI
             >
               <div className="flex space-x-2 px-2 py-2 snap-x snap-mandatory overflow-x-scroll scroll-smooth pb-4
                           sm:space-x-4 sm:px-4 scrollbar-hide"
-                          ref={scrollRef}
-                          // Removed onScroll prop from here as it's now handled by useEffect
+                ref={scrollRef}
               >
-                 {imageUrls.map((src, idx) => (
-                   <motion.div
-                     key={idx}
-                     variants={imageVariants}
-                     whileHover={prefersReducedMotion ? {} : { scale: 1.03, rotate: idx % 2 === 0 ? 1 : -1 }}
-                     className="flex-shrink-0 w-[48vw] aspect-[3/4] snap-center rounded-2xl overflow-hidden shadow-xl
+                {imageUrls.map((src, idx) => (
+                  <motion.div
+                    key={idx}
+                    data-index={idx} 
+                    variants={imageVariants}
+                    whileHover={prefersReducedMotion ? {} : { scale: 1.03, rotate: idx % 2 === 0 ? 1 : -1 }}
+                    className="flex-shrink-0 w-[48vw] aspect-[3/4] snap-center rounded-2xl overflow-hidden shadow-xl
                                  border-4 border-white transform transition-transform duration-300 relative
                                  sm:w-[50vw] lg:w-[400px]"
-                     style={prefersReducedMotion ? {} : { willChange: 'transform' }}
-                   >
-                     <img
-                       src={src}
-                       alt={`Nosso Momento ${idx + 1}`}
-                       className="w-full h-full object-cover object-center"
-                       loading="lazy"
-                       decoding="async"
-                       width="400" // Set intrinsic width for better performance
-                       height="533" // Set intrinsic height for better performance
-                     />
-                     <div className="absolute inset-0 bg-rose-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                   </motion.div>
-                 ))}
-               </div>
+                    style={prefersReducedMotion ? {} : { willChange: 'transform' }}
+                  >
+                    <img
+                      src={src}
+                      alt={`Nosso Momento ${idx + 1}`}
+                      className="w-full h-full object-cover object-center"
+                      loading="lazy"
+                      decoding="async"
+                      width="400" // Set intrinsic width for better performance
+                      height="533" // Set intrinsic height for better performance
+                    />
+                    <div className="absolute inset-0 bg-rose-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  </motion.div>
+                ))}
+              </div>
 
-               {/* Navigation Dots */}
-               <div className="flex justify-center mt-4 space-x-2">
-                 {imageUrls.map((_, idx) => (
-                   <button
-                     key={idx}
-                     onClick={() => scrollToImage(idx)}
-                     className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ease-in-out
+              {/* Navigation Dots */}
+              <div className="flex justify-center mt-4 space-x-2">
+                {imageUrls.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => scrollToImage(idx)}
+                    className={`w-4 h-4 rounded-full transition-all duration-300 ease-in-out
                                  ${idx === activeIndex ? 'bg-rose-600 w-4' : 'bg-gray-300 hover:bg-gray-400'}
                                  focus:outline-none focus:ring-2 focus:ring-rose-300`}
-                     aria-label={`View image ${idx + 1}`}
-                   ></button>
-                 ))}
-               </div>
+                    aria-label={`View image ${idx + 1}`}
+                  ></button>
+                ))}
+              </div>
 
-               {/* Clear instruction for horizontal scroll on mobile */}
-               <p className="text-center text-gray-700 italic mt-3 px-4 text-xs sm:text-sm">
-                 Flores que contam nossa história, momentos que viram eternidade.
-                 <br className="sm:hidden" /> {/* Line break for mobile */}
-                 <span className="sm:hidden text-rose-600 font-bold animate-pulse">Arraste para o lado para ver mais momentos!</span>
-               </p>
-             </motion.div>
+              {/* Clear instruction for horizontal scroll on mobile */}
+              <p className="text-center text-gray-700 italic mt-3 px-4 text-xs sm:text-sm">
+                Flores que contam nossa história, momentos que viram eternidade.
+                <br className="sm:hidden" /> {/* Line break for mobile */}
+                <span className="sm:hidden text-rose-600 font-bold animate-pulse">Arraste para o lado para ver mais momentos!</span>
+              </p>
+            </motion.div>
 
-             {/* Static bottom decorative elements (SVG icons from svgrepo.com for reliability) */}
-             <img
-               src="/img/heart-svgrepo-com.png"
-               alt="Decorative flower"
-               className="absolute sm:block hidden bottom-10 left-15 w-6 h-6 opacity-60 rotate-270 pointer-events-none sm:bottom-16 sm:left-24 lg:bottom-20 lg:left-32"
-               width="24" height="24"
-             />
+            {/* Static bottom decorative elements (SVG icons from svgrepo.com for reliability) */}
+            <img
+              src="/img/heart-svgrepo-com.png"
+              alt="Decorative flower"
+              className="absolute sm:block hidden bottom-10 left-15 w-6 h-6 opacity-60 rotate-270 pointer-events-none sm:bottom-16 sm:left-24 lg:bottom-20 lg:left-32"
+              width="24" height="24"
+            />
 
-           </motion.div>
-         )}
-       </AnimatePresence>
-     </div>
-   );
- };
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
