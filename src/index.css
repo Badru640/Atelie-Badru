@@ -9,22 +9,11 @@
   ** automaticamente com base nas preferências do sistema.
   */
 
-  /* Cores padrão (modo claro) */
   :root {
     --bg-primary: #fefefe;    /* Fundo principal claro */
     --text-primary: #1a1a1a;  /* Texto principal escuro */
     --border-primary: #e5e7eb; /* Borda clara */
     --card-bg: #fff;         /* Fundo de card claro */
-  }
-
-  /* Cores para o modo escuro */
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg-primary: #1a1a1a;    /* Fundo principal escuro */
-      --text-primary: #fefefe;  /* Texto principal claro */
-      --border-primary: #374151; /* Borda escura */
-      --card-bg: #2d2d2d;       /* Fundo de card escuro */
-    }
   }
 
   body {
