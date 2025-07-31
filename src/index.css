@@ -7,3 +7,17 @@
     @apply bg-white text-gray-900;
   }
 }
+/* Para Chrome, Safari e outros navegadores baseados em WebKit */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Para Firefox */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+/* Para Internet Explorer e Edge */
+.no-scrollbar {
+  -ms-overflow-style: none;
+}
