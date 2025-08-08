@@ -3,37 +3,21 @@
 @tailwind utilities;
 
 @layer base {
-  /*
-  ** Cores dinâmicas para modo claro e escuro.
-  ** A cor é definida por variáveis que se ajustam
-  ** automaticamente com base nas preferências do sistema.
-  */
-
-  :root {
-    --bg-primary: #fefefe;    /* Fundo principal claro */
-    --text-primary: #1a1a1a;  /* Texto principal escuro */
-    --border-primary: #e5e7eb; /* Borda clara */
-    --card-bg: #fff;         /* Fundo de card claro */
-  }
-
   body {
-    /* Aplica as variáveis CSS ao corpo do documento */
-    background-color: var(--bg-primary);
-    color: var(--text-primary);
-    @apply antialiased;
+    @apply bg-white text-gray-900;
   }
 }
-
-/*
-** Classes de rolagem sem barra
-** (mantidas como no seu código original)
-*/
+/* Para Chrome, Safari e outros navegadores baseados em WebKit */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Para Firefox */
 .no-scrollbar {
   scrollbar-width: none;
 }
+
+/* Para Internet Explorer e Edge */
 .no-scrollbar {
   -ms-overflow-style: none;
 }

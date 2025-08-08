@@ -66,7 +66,8 @@ export const GuestPage: React.FC = () => {
       const res = await fetch(`${API}?action=getGuest&id=${id}`, {
         cache: 'no-store',
       });
-      return res.json();
+      const data = await res.json();
+      return data.nome ? data : null; // Retorna null se 'nome' não existir
     },
     enabled: !!id,
     staleTime: 0,
@@ -212,7 +213,24 @@ export const GuestPage: React.FC = () => {
   const progressHeight = (100 / (dotConfig.length - 1)) * activeDot;
 
 
-  if (isLoading || !guest) return <p className="p-4 text-center text-gray-700 font-serif"><LoadingScreen /></p>;
+  if (isLoading) return <p className="p-4 text-center text-gray-700 font-serif"><LoadingScreen /></p>;
+  if (!guest || !guest.nome) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-stone-100 p-4">
+        <div className="text-center p-8 bg-gray-50 rounded-lg shadow-xl max-w-md">
+          <img src="https://i.pinimg.com/originals/ef/8b/bd/ef8bbd4554dedcc2fd1fd15ab0ebd7a1.gif" alt="Convite não encontrado" className="h-24 w-24 mx-auto mb-6" />
+          <h1 className="text-3xl font-bold text-rose-700 mb-2 font-['Playfair_Display']">Convite não encontrado</h1>
+          <p className="text-gray-600 text-lg">
+            O convite para o ID fornecido não existe ou foi removido.
+          </p>
+          <p className="text-gray-600 text-sm mt-2">
+  Para qualquer dúvida, entre em contato com a pessoa que te enviou este convite.
+</p>
+        </div>
+      </div>
+    );
+  }
+
   if (step === 'welcome') {
     return <WelcomeScreen guestName={guest.nome} onViewInvite={() => setStep('invite')} />;
   }
