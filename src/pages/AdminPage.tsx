@@ -192,7 +192,7 @@ const AdminPage = () => {
 
   if (isLoading) return <AdminLoadingScreen />;
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6">
+    <div className="max-w-7xl mx-auto px-2 py-6">
       <h1 className="text-3xl font-bold text-rose-700 mb-6 text-center">Painel de Convidados</h1>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 mb-8">
