@@ -1,73 +1,103 @@
-// Novo layout moderno com melhorias visuais, filtros e ação por clique no card + persistência de estado completa + toast de filtro + convite WhatsApp com link e controle de convidados já convidados
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
 import { removeAccents } from '../utils/removeaccents';
 import { toast } from 'sonner';
-import { Users, CheckCircle, XCircle, DoorOpen, Table2, Send, UsersRound, MessageSquare } from 'lucide-react';
+import {
+  Users,
+  CheckCircle,
+  XCircle,
+  DoorOpen,
+  Table2,
+  Send,
+  UsersRound,
+  MessageSquare,
+  Repeat2,
+  MoreHorizontal,
+} from 'lucide-react';
+import AdminLoadingScreen from '../components/loadingscreen';
+import GuestCharts from '../components/grafics';
 
-const API = 'https://script.google.com/macros/s/AKfycbyHOxm1npJxrDj-m7wCqoV1Z1l6scN2MM1eEb9lJS3fRqrJ7rWBGdVcBs1MQ2QzWJpt/exec';
-const LINK_CONVITE = 'https://ateliebadru.vercel.app//convite';
+// Definição de tipo para o objeto de convidado
+interface Guest {
+  id: string;
+  nome: string;
+  familia: string;
+  confirmou?: 'sim' | 'não';
+  chegou?: boolean;
+  convite_enviado?: 'sim' | 'não';
+  lado?: 'noiva' | 'noivo';
+  mesa?: string;
+}
 
+const API = 'https://script.google.com/macros/s/AKfycbxsMqSeierihKZmpr7FLYYzL_6oAP8hX2BivXiRzcjeA6_btqG8otxctsorJ8abqNvJ/exec';
+const LINK_CONVITE = 'https://ateliebadru.vercel.app/convidado';
+
+// Tipagem corrigida para os parâmetros 'nome' e 'id'
 const getWhatsAppLink = (nome: string, id: string): string => {
-  const msg = encodeURIComponent(`Olá ${nome}, você está convidado para o nosso casamento! 💍🎉 Acesse o convite: ${LINK_CONVITE}?id=${id}`);
+  const msg = encodeURIComponent(`🎉 Olá, *${nome}*! 🎉
+
+É com imensa alegria que convidamos você para o nosso casamento!
+
+Acesse o convite online e **confirme sua presença** através do link abaixo:
+🔗 ${LINK_CONVITE}/${id}
+
+Mal podemos esperar para comemorar com você! ✨`);
   return `https://wa.me/?text=${msg}`;
 };
 
 const AdminPage = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const savedState = JSON.parse(localStorage.getItem('admin-state') || '{}');
-  const savedEnviados = JSON.parse(localStorage.getItem('convites-enviados') || '[]');
-
-  const [search, setSearch] = useState(savedState.search || '');
-  const [statusFilter, setStatusFilter] = useState(savedState.statusFilter || '');
-  const [ladoFilter, setLadoFilter] = useState(savedState.ladoFilter || '');
-  const [familiaFilter, setFamiliaFilter] = useState(savedState.familiaFilter || '');
-  const [scrollY, setScrollY] = useState(savedState.scrollY || 0);
-  const [enviados, setEnviados] = useState<string[]>(savedEnviados);
-
-  // Mostrar toast ao retornar ou mudar filtros
-  useEffect(() => {
-    const partes = [];
-    if (statusFilter) partes.push(`status: ${statusFilter}`);
-    if (ladoFilter) partes.push(`lado: ${ladoFilter}`);
-    if (familiaFilter) partes.push(`família: ${familiaFilter}`);
-    if (search) partes.push(`busca: "${search}"`);
-    if (partes.length > 0) toast.success(`Filtrado por ${partes.join(', ')}`);
-  }, [search, statusFilter, ladoFilter, familiaFilter]);
+  
+  const [search, setSearch] = useState<string>(savedState.search || '');
+  const [statusFilter, setStatusFilter] = useState<string>(savedState.statusFilter || '');
+  const [ladoFilter, setLadoFilter] = useState<string>(savedState.ladoFilter || '');
+  const [familiaFilter, setFamiliaFilter] = useState<string>(savedState.familiaFilter || '');
+  const [scrollY, setScrollY] = useState<number>(savedState.scrollY || 0);
 
   useEffect(() => {
-    const handleSave = () => {
-      localStorage.setItem(
-        'admin-state',
-        JSON.stringify({ search, statusFilter, ladoFilter, familiaFilter, scrollY: window.scrollY })
-      );
-      localStorage.setItem('convites-enviados', JSON.stringify(enviados));
-    };
-    window.addEventListener('beforeunload', handleSave);
-    return () => {
-      handleSave();
-      window.removeEventListener('beforeunload', handleSave);
-    };
-  }, [search, statusFilter, ladoFilter, familiaFilter, enviados]);
+    const currentState = JSON.parse(localStorage.getItem('admin-state') || '{}');
+    localStorage.setItem('admin-state', JSON.stringify({ ...currentState, search }));
+  }, [search]);
+
+  useEffect(() => {
+    const currentState = JSON.parse(localStorage.getItem('admin-state') || '{}');
+    localStorage.setItem('admin-state', JSON.stringify({ ...currentState, statusFilter }));
+  }, [statusFilter]);
+  
+  useEffect(() => {
+    const currentState = JSON.parse(localStorage.getItem('admin-state') || '{}');
+    localStorage.setItem('admin-state', JSON.stringify({ ...currentState, ladoFilter }));
+  }, [ladoFilter]);
+
+  useEffect(() => {
+    const currentState = JSON.parse(localStorage.getItem('admin-state') || '{}');
+    localStorage.setItem('admin-state', JSON.stringify({ ...currentState, familiaFilter }));
+  }, [familiaFilter]);
 
   useEffect(() => {
     if (scrollY) {
       window.scrollTo({ top: scrollY, behavior: 'instant' });
     }
-  }, []);
+  }, [scrollY]);
 
-  const { data: guests = [], isLoading } = useQuery({
+  const { data: guests = [], isLoading } = useQuery<Guest[]>({
     queryKey: ['all-guests'],
     queryFn: async () => {
       const res = await fetch(`${API}?action=getAllGuests`);
       return res.json();
     },
+    refetchOnReconnect: true,
+    refetchOnWindowFocus: true,
+    refetchInterval: 5000, 
   });
 
   const allFamilias = useMemo(() => {
-    const set = new Set();
+    const set = new Set<string>();
     guests.forEach((g) => g.familia && set.add(g.familia));
     return Array.from(set).sort();
   }, [guests]);
@@ -78,7 +108,9 @@ const AdminPage = () => {
     const naoConfirmados = total - confirmados;
     const chegaram = guests.filter(g => g.chegou).length;
     const naoChegaram = total - chegaram;
-    return { total, confirmados, naoConfirmados, chegaram, naoChegaram };
+    const convitesEnviados = guests.filter(g => g.convite_enviado?.toLowerCase() === 'sim').length;
+    const convitesNaoEnviados = total - convitesEnviados;
+    return { total, confirmados, naoConfirmados, chegaram, naoChegaram, convitesEnviados, convitesNaoEnviados };
   }, [guests]);
 
   const filteredGuests = useMemo(() => {
@@ -93,49 +125,77 @@ const AdminPage = () => {
         (statusFilter === 'confirmado' && g.confirmou?.toLowerCase() === 'sim') ||
         (statusFilter === 'nao-confirmado' && g.confirmou?.toLowerCase() !== 'sim') ||
         (statusFilter === 'chegou' && g.chegou) ||
-        (statusFilter === 'nao-chegou' && !g.chegou);
+        (statusFilter === 'nao-chegou' && !g.chegou) ||
+        (statusFilter === 'convite-enviado' && g.convite_enviado?.toLowerCase() === 'sim') ||
+        (statusFilter === 'nao-enviado' && g.convite_enviado?.toLowerCase() !== 'sim');
 
       return matchSearch && matchStatus && matchLado && matchFamilia;
+    }).sort((a: Guest, b: Guest) => { // Tipagem corrigida para os parâmetros 'a' e 'b'
+      const aSent = a.convite_enviado?.toLowerCase() === 'sim';
+      const bSent = b.convite_enviado?.toLowerCase() === 'sim';
+      if (aSent && !bSent) return 1;
+      if (!aSent && bSent) return -1;
+      return 0;
     });
   }, [guests, search, statusFilter, ladoFilter, familiaFilter]);
-
-  const confirmados = filteredGuests.filter(g => g.confirmou?.toLowerCase() === 'sim');
-  const naoConfirmados = filteredGuests.filter(g => g.confirmou?.toLowerCase() !== 'sim');
 
   const statusCards = [
     { label: 'Todos', value: stats.total, key: '' },
     { label: 'Confirmados', value: stats.confirmados, key: 'confirmado' },
     { label: 'Não Confirmados', value: stats.naoConfirmados, key: 'nao-confirmado' },
+    { label: 'Convites Não Enviados', value: stats.convitesNaoEnviados, key: 'nao-enviado' },
+    { label: 'Convites Enviados', value: stats.convitesEnviados, key: 'convite-enviado' },
     { label: 'Chegaram', value: stats.chegaram, key: 'chegou' },
     { label: 'Não Chegaram', value: stats.naoChegaram, key: 'nao-chegou' },
   ];
 
-  const handleNavigate = (g) => {
+  const mutation = useMutation({
+    mutationFn: (id: string) => { // Tipagem corrigida para o parâmetro 'id'
+      return fetch(API, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'markInvitationSent', id: id }),
+      }).then(res => res.json());
+    },
+    onSuccess: (data, id) => {
+      if (data.success) {
+        toast.success(`Convite de ${filteredGuests.find(g => g.id === id)?.nome} marcado como enviado!`);
+        queryClient.invalidateQueries({ queryKey: ['all-guests'] });
+      } else {
+        toast.error('Erro ao marcar convite. Tente novamente.');
+      }
+    },
+    onError: () => {
+      toast.error('Erro de rede ao marcar convite.');
+    },
+  });
+
+  const handleNavigate = (g: Guest) => {
     localStorage.setItem(
       'admin-state',
-      JSON.stringify({ search, statusFilter, ladoFilter, familiaFilter, scrollY: window.scrollY })
+      JSON.stringify({
+        search,
+        statusFilter,
+        ladoFilter,
+        familiaFilter,
+        scrollY: window.scrollY,
+      })
     );
     navigate(`/admin/${g.id}`, { state: { guest: g } });
   };
 
-  const handleEnviarConvite = (g) => {
+  const handleEnviarConvite = (g: Guest) => {
     if (!g?.id || !g?.nome) return;
     const link = getWhatsAppLink(g.nome, g.id);
-    const atualizados = [...new Set([...enviados, g.id])];
-    setEnviados(atualizados);
-    localStorage.setItem('convites-enviados', JSON.stringify(atualizados));
     window.open(link, '_blank');
+    mutation.mutate(g.id);
   };
 
-  if (isLoading) return <p className="p-6 text-center text-lg">Carregando convidados...</p>;
-
-
+  if (isLoading) return <AdminLoadingScreen />;
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
       <h1 className="text-3xl font-bold text-rose-700 mb-6 text-center">Painel de Convidados</h1>
 
-      {/* Estatísticas */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 mb-8">
         {statusCards.map(({ label, value, key }) => (
           <button
             key={label}
@@ -148,8 +208,8 @@ const AdminPage = () => {
           </button>
         ))}
       </div>
+   
 
-      {/* Filtros */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         <input
           type="text"
@@ -177,79 +237,204 @@ const AdminPage = () => {
         </select>
       </div>
 
-      {/* Cards não confirmados */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        {naoConfirmados.map((g) => (
-          <div
-            key={g.id}
-            className="rounded-xl p-5 shadow-md bg-white border border-gray-300 hover:shadow-lg transition"
-          >
-            <h2 className="text-lg font-semibold text-gray-800 mb-2">{g.nome}</h2>
-            <div className="text-sm text-gray-600 space-y-1">
-              <p className="flex items-center gap-2"><Users size={16} /> Família: {g.familia || '—'}</p>
-              <p className="flex items-center gap-2"><UsersRound size={16} /> Lado: {g.lado || '—'}</p>
-              <p className="flex items-center gap-2"><XCircle size={16} className="text-red-400" /> Confirmado: Não</p>
-              <p className="flex items-center gap-2"><DoorOpen size={16} className="text-blue-500" /> Chegou: {g.chegou ? 'Sim' : 'Não'}</p>
-              <p className="flex items-center gap-2"><Table2 size={16} className="text-yellow-600" /> Mesa: {g.mesa || '—'}</p>
-            </div>
-            <div className="mt-4 flex flex-col gap-2">
-              <a
-                href={getWhatsAppLink(g.nome)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full flex justify-center items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-full text-sm hover:bg-green-600"
-              >
-                <MessageSquare size={16} /> WhatsApp
-              </a>
-              <button
-                onClick={() => handleNavigate(g)}
-                className="w-full flex justify-center items-center gap-2 px-4 py-2 bg-rose-500 text-white rounded-full text-sm hover:bg-rose-600"
-              >
-                <Send size={16} /> Ver Detalhes
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+        {filteredGuests.map((g: Guest) => {
+          const isConfirmed = g.confirmou?.toLowerCase() === 'sim';
+          const isInvitationSent = g.convite_enviado?.toLowerCase() === 'sim';
 
-      {/* Cards confirmados */}
-      <h3 className="text-xl font-bold text-green-700 mb-4 flex items-center gap-2">
-        <CheckCircle size={20} /> Confirmados
-      </h3>
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {confirmados.map((g) => (
-          <div
-            key={g.id}
-            className="rounded-xl p-5 shadow-md border-2 border-green-400 bg-green-50 hover:shadow-lg transition"
-          >
-            <h2 className="text-lg font-semibold text-gray-800 mb-2 flex items-center gap-2">
-              <CheckCircle size={20} className="text-green-600" /> {g.nome}
-            </h2>
-            <div className="text-sm text-gray-700 space-y-1">
-              <p className="flex items-center gap-2"><Users size={16} /> Família: {g.familia || '—'}</p>
-              <p className="flex items-center gap-2"><UsersRound size={16} /> Lado: {g.lado || '—'}</p>
-              <p className="flex items-center gap-2"><DoorOpen size={16} className="text-blue-500" /> Chegou: {g.chegou ? 'Sim' : 'Não'}</p>
-              <p className="flex items-center gap-2"><Table2 size={16} className="text-yellow-600" /> Mesa: {g.mesa || '—'}</p>
+          return (
+            <div
+              key={g.id}
+              onClick={() => handleNavigate(g)}
+              className={`rounded-xl p-6 shadow-md transition cursor-pointer
+                ${isConfirmed ? 'border-2 border-blue-500 bg-blue-100' : 'border border-gray-300 bg-white'}
+                hover:shadow-lg hover:border-rose-400`}
+            >
+              <div className="flex flex-col mb-4">
+                <div className="flex items-center gap-2">
+                  {isConfirmed ? <CheckCircle size={24} className="text-green-600" /> : <XCircle size={24} className="text-red-400" />}
+                  <h2 className="text-2xl font-bold text-gray-800">{g.nome}</h2>
+                </div>
+                <div className="flex justify-center mt-1">
+                  <span className={`px-3 py-1 rounded-full text-sm font-semibold tracking-wide ${isInvitationSent ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
+                    {isInvitationSent ? 'Convite Enviado' : 'Não Enviado'}
+                  </span>
+                </div>
+              </div>
+              <hr className="my-3 border-t border-gray-200" />
+              <div className="grid grid-cols-2 gap-4 text-sm text-gray-700 mb-4">
+                <div className="flex items-center gap-2">
+                  <Users size={16} className="text-gray-500" />
+                  <div>
+                    <div className="font-semibold">Família</div>
+                    <div>{g.familia || '—'}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <UsersRound size={16} className="text-gray-500" />
+                  <div>
+                    <div className="font-semibold">Lado</div>
+                    <div>{g.lado || '—'}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Table2 size={16} className="text-gray-500" />
+                  <div>
+                    <div className="font-semibold">Mesa</div>
+                    <div>{g.mesa || '—'}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <DoorOpen size={16} className="text-gray-500" />
+                  <div>
+                    <div className="font-semibold">Chegou</div>
+                    <div className={g.chegou ? 'text-green-600' : 'text-red-400'}>{g.chegou ? 'Sim' : 'Não'}</div>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 flex gap-2">
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleNavigate(g); }}
+                  className="w-1/2 flex justify-center items-center gap-2 px-4 py-2 text-rose-500 border border-rose-500 rounded-full text-sm hover:bg-rose-50 hover:text-rose-600 transition"
+                >
+                  <MoreHorizontal size={16} /> Ver Detalhes
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEnviarConvite(g);
+                  }}
+                  className={`w-1/2 flex justify-center items-center gap-2 px-4 py-2 text-white rounded-full text-sm ${isInvitationSent ? 'bg-rose-400 hover:bg-rose-500' : 'bg-green-500 hover:bg-green-600'}`}
+                >
+                  {isInvitationSent ? <Repeat2 size={16} /> : <MessageSquare size={16} />} 
+                  {isInvitationSent ? 'Re-enviar' : 'Enviar'}
+                </button>
+              </div>
             </div>
-            <div className="mt-4 flex flex-col gap-2">
-              <a
-                href={getWhatsAppLink(g.nome)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full flex justify-center items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-full text-sm hover:bg-green-600"
-              >
-                <MessageSquare size={16} /> WhatsApp
-              </a>
-              <button
-                onClick={() => handleNavigate(g)}
-                className="w-full flex justify-center items-center gap-2 px-4 py-2 bg-rose-500 text-white rounded-full text-sm hover:bg-rose-600"
-              >
-                <Send size={16} /> Ver Detalhes
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
+         
+      {/* Novo componente de gráficos */}
+      <GuestCharts guests={guests} />
+
+      {/* Guia de Filtros Mobile */}
+      <motion.div
+        className=" fixed bottom-0 left-0 right-0 z-50 bg-white/90 p-1 shadow-top-md border-t-2 border-rose-300 backdrop-blur-sm"
+        initial={{ y: "100%" }}
+        animate={{ y: "0%" }}
+        transition={{ type: "spring", stiffness: 200, damping: 25 }}
+      >
+        <div className="flex justify-around items-center w-full">
+          {/* Botão Todos */}
+          <motion.div
+            className="flex flex-col items-center cursor-pointer p-1"
+            onClick={() => setStatusFilter('')}
+          >
+            <motion.div
+              className={`w-1 h-1 rounded-full mb-1 transition-colors duration-300`}
+              animate={{
+                scale: !statusFilter && !ladoFilter && !familiaFilter ? 1.8 : 1,
+                backgroundColor: !statusFilter && !ladoFilter && !familiaFilter ? '#E11D48' : '#9CA3AF',
+              }}
+              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+            />
+            <Users
+              size={20}
+              className={`h-5 w-5 ${!statusFilter && !ladoFilter && !familiaFilter ? 'text-rose-600' : 'text-gray-400'}`}
+            />
+            <motion.span
+              className="text-xs font-semibold mt-1"
+              animate={{
+                color: !statusFilter && !ladoFilter && !familiaFilter ? '#E11D48' : '#9CA3AF',
+              }}
+            >
+              Todos
+            </motion.span>
+          </motion.div>
+
+          {/* Botão Confirmados */}
+          <motion.div
+            className="flex flex-col items-center cursor-pointer p-1"
+            onClick={() => setStatusFilter('confirmado')}
+          >
+            <motion.div
+              className={`w-1 h-1 rounded-full mb-1 transition-colors duration-300`}
+              animate={{
+                scale: statusFilter === 'confirmado' ? 1.8 : 1,
+                backgroundColor: statusFilter === 'confirmado' ? '#10B981' : '#9CA3AF',
+              }}
+              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+            />
+            <CheckCircle
+              size={20}
+              className={`h-5 w-5 ${statusFilter === 'confirmado' ? 'text-blue-600' : 'text-gray-400'}`}
+            />
+            <motion.span
+              className="text-xs font-semibold mt-1"
+              animate={{
+                color: statusFilter === 'confirmado' ? '#2563eb' : '#9CA3AF',
+              }}
+            >
+              Confirmados
+            </motion.span>
+          </motion.div>
+
+          {/* Botão Convites NÃO Enviados */}
+          <motion.div
+            className="flex flex-col items-center cursor-pointer p-1"
+            onClick={() => setStatusFilter('nao-enviado')}
+          >
+            <motion.div
+              className={`w-1 h-1 rounded-full mb-1 transition-colors duration-300`}
+              animate={{
+                scale: statusFilter === 'nao-enviado' ? 1.8 : 1,
+                backgroundColor: statusFilter === 'nao-enviado' ? '#F97316' : '#9CA3AF',
+              }}
+              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+            />
+            <MessageSquare
+              size={20}
+              className={`h-5 w-5 ${statusFilter === 'nao-enviado' ? 'text-orange-500' : 'text-gray-400'}`}
+            />
+            <motion.span
+              className="text-xs font-semibold mt-1"
+              animate={{
+                color: statusFilter === 'nao-enviado' ? '#F97316' : '#9CA3AF',
+              }}
+            >
+              Não Enviados
+            </motion.span>
+          </motion.div>
+
+          {/* Botão Convites Enviados */}
+          <motion.div
+            className="flex flex-col items-center cursor-pointer p-1"
+            onClick={() => setStatusFilter('convite-enviado')}
+          >
+            <motion.div
+              className={`w-1 h-1 rounded-full mb-1 transition-colors duration-300`}
+              animate={{
+                scale: statusFilter === 'convite-enviado' ? 1.8 : 1,
+                backgroundColor: statusFilter === 'convite-enviado' ? '#E11D48' : '#9CA3AF',
+              }}
+              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+            />
+            <Send
+              size={20}
+              className={`h-5 w-5 ${statusFilter === 'convite-enviado' ? 'text-rose-600' : 'text-gray-400'}`}
+            />
+            <motion.span
+              className="text-xs font-semibold mt-1"
+              animate={{
+                color: statusFilter === 'convite-enviado' ? '#E11D48' : '#9CA3AF',
+              }}
+            >
+              Enviados
+            </motion.span>
+          </motion.div>
+        </div>
+      </motion.div>
     </div>
   );
 };

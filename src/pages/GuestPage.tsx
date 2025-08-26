@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MessageForm } from '../components/guest/formguest';
 import { WelcomeScreen } from '../components/guest/welcome';
 import toast from 'react-hot-toast';
-import LoadingScreen from '../components/loading';
+import LoadingScreen from '../components/guest/loading';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faRing,
@@ -21,7 +21,7 @@ import {
 import { InviteLocations } from '../components/guest/location';
 
 // --- API Endpoint (Ajuste conforme sua URL do Google Apps Script) ---
-const API = "https://script.google.com/macros/s/AKfycbyHOxm1npJxrDj-m7wCqoV1Z1l6scN2MM1eEb9lJS3fRqrJ7rWBGdVcBs1MQ2QzWJpt/exec";
+const API = "https://script.google.com/macros/s/AKfycbxsMqSeierihKZmpr7FLYYzL_6oAP8hX2BivXiRzcjeA6_btqG8otxctsorJ8abqNvJ/exec";
 
 // --- Guest Interface ---
 interface Guest {
@@ -294,7 +294,7 @@ export const GuestPage: React.FC = () => {
         </div>
       </motion.div>
 
-      <div className="bg-white rounded-none shadow-none p-6 space-y-6 border-none overflow-hidden sm:rounded-3xl sm:shadow-2xl sm:p-8 sm:space-y-8 sm:border sm:border-stone-200">
+      <div className="bg-white rounded-none shadow-none p-4 space-y-6 border-none overflow-hidden sm:rounded-3xl sm:shadow-2xl sm:p-8 sm:space-y-8 sm:border sm:border-stone-200">
 
         <div ref={headerRef} className="text-center space-y-6 sm:space-y-8 font-['Playfair_Display'] text-gray-900">
           <div className="flex justify-center">
@@ -310,18 +310,25 @@ export const GuestPage: React.FC = () => {
           </p>
           <hr className="border-t border-gray-300 w-20 mx-auto" />
           <div className="text-base sm:text-lg text-gray-800 leading-snug space-y-1">
-            <p className="font-semibold">Cânticos 8:6–7</p>
-            <p className="italic">“Grava-me como selo <br /> sobre o teu coração…”</p>
-            <p className="text-sm text-gray-500">(versículo completo)</p>
-          </div>
+  <p className="font-semibold">Cânticos 8:6–7</p>
+  <p className="italic">“Grava-me como selo <br /> sobre o teu coração…”</p>
+  <a
+    href="https://www.bibliaonline.com.br/nvi/ct/8/6,7"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-sm text-gray-500 hover:underline"
+  >
+    (versículo completo)
+  </a>
+</div>
           <div
             className="flex flex-col sm:flex-row justify-center items-stretch gap-4 mt-8"
             onClick={handleScrollToLocations}
             aria-label="Clique para ver os mapas de localização dos eventos"
           >
             <div className="flex-1 p-4 bg-rose-50 rounded-xl shadow-inner border border-rose-200 cursor-pointer hover:shadow-lg transition-shadow duration-300 flex flex-col items-center text-center">
-              <h3 className="font-bold text-rose-700 text-xl sm:text-2xl mb-2 flex items-center justify-center">
-                <FontAwesomeIcon icon={faChurch} className="h-6 w-6 mr-2" />
+              <h3 className="font-bold text-amber-600 text-xl sm:text-2xl mb-2 flex items-center justify-center">
+                <FontAwesomeIcon icon={faChurch} className="h-6  w-6 mr-2" />
                 Cerimônia Religiosa
               </h3>
               <p className="text-base">📍 Igreja Evangélica Luterana em Moçambique</p>
@@ -332,7 +339,7 @@ export const GuestPage: React.FC = () => {
             <div className="hidden sm:block border-l border-rose-300 h-auto"></div>
             <div className="sm:hidden w-full border-t border-rose-300 my-2"></div>
             <div className="flex-1 p-4 bg-rose-50 rounded-xl shadow-inner border border-rose-200 cursor-pointer hover:shadow-lg transition-shadow duration-300 flex flex-col items-center text-center">
-              <h3 className="font-bold text-rose-700 text-xl sm:text-2xl mb-2 flex items-center justify-center">
+              <h3 className="font-bold text-amber-600 text-xl sm:text-2xl mb-2 flex items-center justify-center">
                 <FontAwesomeIcon icon={faUtensils} className="h-6 w-6 mr-2" />
                 Copo d'Água
               </h3>
@@ -347,7 +354,7 @@ export const GuestPage: React.FC = () => {
         <hr className="border-t border-stone-200 my-6 sm:my-8" />
 
         <div className="bg-white/90 backdrop-blur-md border border-rose-200 rounded-2xl shadow-lg px-4 py-5 sm:px-5 sm:py-6 max-w-xl mx-auto text-gray-800 font-[serif] leading-relaxed text-base space-y-4">
-           <p className="text-center text-2xl sm:text-3xl font-['Playfair_Display'] text-rose-900 font-bold mb-3">
+           <p className="text-center text-2xl sm:text-3xl font-['Playfair_Display'] text-amber-600 font-bold mb-3">
                  {guest.nome}
             </p>
             <p className="text-center text-md sm:text-lg text-gray-700">
@@ -368,7 +375,7 @@ export const GuestPage: React.FC = () => {
                 <p>
                     <strong>Sua Mesa:</strong>{' '}
                     {guest.chegou ? (
-                        <span className="text-emerald-600 font-semibold">{guest.mesa}</span>
+                        <span className="text-emerald-600 font-semibold break-words">{guest.mesa}</span>
                     ) : (
                         <span className="italic text-gray-500">Será informada no evento</span>
                     )}

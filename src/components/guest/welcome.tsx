@@ -86,8 +86,8 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ guestName, onViewI
  const imageUrls = useMemo(() => ([
    "/img/couple/PHOTO-2025-07-10-00-09-35.jpg",
    "/img/couple/PHOTO-2025-07-10-00-21-51 2.jpg",
-   "/img/couple/PHOTO-2025-07-10-00-21-51 3.jpg",
-   "https://images.unsplash.com/photo-1533503525540-8b1c4b7b2f6b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&h=533&q=75",
+   "/img/couple/IMG_9035.jpg",
+   "/img/couple/IMG_9034.jpg",
  ]), []);
 
  // Function to scroll to a specific image AND update the activeIndex

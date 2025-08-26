@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { CountdownTimer } from "./guest/count"; // Ensure this path is correct
+import { CountdownTimer } from "./count"; // Ensure this path is correct
 
 export default function LoadingScreen() {
   const [showCurtain, setShowCurtain] = useState(true);
