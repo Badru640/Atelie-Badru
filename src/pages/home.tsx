@@ -10,14 +10,27 @@ const HomePage: React.FC = () => {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (role === 'admin' && password === 'admin123') {
-      login('hirondina@gmail.com');
-      navigate('/admin');
-    } else if (role === 'protocolo' && password === 'protocolo123') {
-      login('protocolo@evento.com');
-      navigate('/protocolo');
-    } else {
-      alert('Credenciais inválidas');
+    // Mensagem de erro se a função não for selecionada
+    if (!role) {
+      alert('Por favor, selecione seu tipo de acesso (Administração ou Protocolo) antes de continuar.');
+      return; // Impede a continuação do login
+    }
+
+    // Mensagens de erro específicas para cada função
+    if (role === 'admin') {
+      if (password === 'Htcm0604') {
+        login('hirondina@gmail.com');
+        navigate('/admin');
+      } else {
+        alert('Senha incorreta para Administrador. Por favor, tente novamente.');
+      }
+    } else if (role === 'protocolo') {
+      if (password === 'protocolo123') {
+        login('protocolo@evento.com');
+        navigate('/protocolo');
+      } else {
+        alert('Senha incorreta para Protocolo. Por favor, tente novamente.');
+      }
     }
   };
 

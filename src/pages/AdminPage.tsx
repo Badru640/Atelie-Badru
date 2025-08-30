@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { removeAccents } from '../utils/removeaccents';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 import {
   Users,
   CheckCircle,
@@ -35,9 +35,8 @@ interface Guest {
 const API = 'https://script.google.com/macros/s/AKfycbxsMqSeierihKZmpr7FLYYzL_6oAP8hX2BivXiRzcjeA6_btqG8otxctsorJ8abqNvJ/exec';
 const LINK_CONVITE = 'https://ateliebadru.vercel.app/convidado';
 
-// Tipagem corrigida para os parâmetros 'nome' e 'id'
 const getWhatsAppLink = (nome: string, id: string): string => {
-  const msg = encodeURIComponent(`Olá, *${nome}*,
+  const msg = encodeURIComponent(`🎉 Olá, *${nome}*,
 
 Convidamos você para nosso casamento.
 

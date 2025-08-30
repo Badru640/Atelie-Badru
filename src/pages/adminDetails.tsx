@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 import {
   UserCircleIcon,
   UsersIcon,
@@ -20,7 +20,7 @@ import {
 import { motion } from 'framer-motion';
 import AdminLoadingScreen from '../components/loadingscreen';
 
-// Definir a interface para os dados do convidado para tipagem segura
+// Define a interface para os dados do convidado para tipagem segura
 interface Guest {
   id: string;
   nome: string;
@@ -58,36 +58,20 @@ const AdminGuestDetails: React.FC = () => {
 
   const initialGuestData = location.state?.guest as Guest;
 
-  const [guest, setGuest] = useState<Guest | null>(initialGuestData || null);
-  const [loading, setLoading] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedComments, setEditedComments] = useState({
-    dedicatoria_para: initialGuestData?.["dedicatória_para"] || '',
-    comentario1: initialGuestData?.comentário1 || '',
-    comentario2: initialGuestData?.comentário2 || '',
-  });
+  const [isEditing, setIsEditing] = React.useState(false);
 
-  const { data: guestFromQuery, isLoading, refetch } = useQuery<Guest>({
-    queryKey: ['adminGuest', guest?.id],
+  const { data: guest, isLoading } = useQuery<Guest>({
+    queryKey: ['adminGuest', initialGuestData?.id],
     queryFn: async () => {
-      if (!guest?.id) throw new Error("ID do convidado não está disponível.");
-      const res = await fetch(`${API}?action=getGuest&id=${guest.id}`);
+      if (!initialGuestData?.id) throw new Error("ID do convidado não está disponível.");
+      const res = await fetch(`${API}?action=getGuest&id=${initialGuestData.id}`);
       if (!res.ok) throw new Error('Falha ao buscar convidado');
       return res.json();
     },
-    enabled: !initialGuestData && !!guest?.id,
+    enabled: !!initialGuestData?.id,
+    initialData: initialGuestData,
+    refetchInterval: 10000,
   });
-
-  useEffect(() => {
-    if (guestFromQuery) {
-      setGuest(guestFromQuery);
-      setEditedComments({
-        dedicatoria_para: guestFromQuery["dedicatória_para"] || '',
-        comentario1: guestFromQuery.comentário1 || '',
-        comentario2: guestFromQuery.comentário2 || '',
-      });
-    }
-  }, [guestFromQuery]);
 
   const mutation = useMutation({
     mutationFn: async ({ action, payload }: { action: string, payload: Partial<Guest> }) => {
@@ -95,40 +79,57 @@ const AdminGuestDetails: React.FC = () => {
         method: 'POST',
         body: JSON.stringify({ action, ...payload }),
       });
+      if (!res.ok) throw new Error('Falha na ação.');
       return res.json();
     },
-    onSuccess: async (data) => {
+    onMutate: async ({ payload }) => {
+      await queryClient.cancelQueries({ queryKey: ['adminGuest', guest?.id] });
+      const previousGuest = queryClient.getQueryData<Guest>(['adminGuest', guest?.id]);
+
+      queryClient.setQueryData<Guest>(['adminGuest', guest?.id], (old) => {
+        return old ? { ...old, ...payload } : old;
+      });
+
+      return { previousGuest };
+    },
+    onSuccess: (data) => {
       if (data.success) {
         toast.success(data.message || 'Ação realizada com sucesso!');
-        await queryClient.invalidateQueries({ queryKey: ['all-guests'] });
-        await refetch();
       } else {
-        toast.error(data.message || 'Erro ao realizar a ação.');
       }
     },
-    onError: () => {
-      toast.error('Erro de rede. Tente novamente.');
+    onError: (err, _, context) => {
+      toast.error(err.message || 'Erro de rede. Revertendo...');
+      if (context?.previousGuest) {
+        queryClient.setQueryData<Guest>(['adminGuest', guest?.id], context.previousGuest);
+      }
     },
     onSettled: () => {
-      setLoading(false);
-    }
+      queryClient.invalidateQueries({ queryKey: ['adminGuest', guest?.id] });
+      queryClient.invalidateQueries({ queryKey: ['all-guests'] });
+      setIsEditing(false);
+    },
   });
 
   const handleAction = (action: string, payload: Partial<Guest> = {}) => {
     if (!guest?.id) return;
-    setLoading(true);
     mutation.mutate({ action, payload: { id: guest.id, ...payload } });
   };
 
-  const handleSaveComments = () => {
-    const payload = {
-      ...guest,
-      "dedicatória_para": editedComments.dedicatoria_para,
-      "comentário1": editedComments.comentario1,
-      "comentário2": editedComments.comentario2,
+  const handleSaveComments = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const newComments = {
+      dedicatoria_para: formData.get('dedicatoria_para') as string,
+      comentario1: formData.get('comentario1') as string,
+      comentario2: formData.get('comentario2') as string,
     };
-    handleAction('confirmAttendance', payload);
-    setIsEditing(false);
+    handleAction('confirmAttendance', {
+      "dedicatória_para": newComments.dedicatoria_para,
+      "comentário1": newComments.comentario1,
+      "comentário2": newComments.comentario2,
+    });
   };
 
   const handleSendInvitation = () => {
@@ -138,26 +139,8 @@ const AdminGuestDetails: React.FC = () => {
     handleAction('markInvitationSent', { convite_enviado: 'sim' });
   };
 
-  if (isLoading) {
+  if (isLoading || !guest) {
     return <AdminLoadingScreen />;
-  }
-
-  if (!guest) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-rose-50 p-6">
-        <div className="bg-white p-8 rounded-xl shadow-lg text-center max-w-sm w-full border-2 border-rose-200">
-          <p className="text-xl font-serif font-semibold text-rose-900 mb-4">
-            Dados do convidado não encontrados.
-          </p>
-          <button
-            onClick={() => navigate(-1)}
-            className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 rounded-lg transition duration-200 ease-in-out"
-          >
-            Voltar
-          </button>
-        </div>
-      </div>
-    );
   }
 
   const isConfirmed = guest.confirmou === 'sim';
@@ -241,46 +224,56 @@ const AdminGuestDetails: React.FC = () => {
             </div>
 
             {isEditing ? (
-              <div className="space-y-4">
+              <form onSubmit={handleSaveComments} className="space-y-4">
                 <p className="text-sm font-serif font-semibold text-gray-500 block">
                   <HeartIcon className="h-4 w-4 inline-block text-rose-500 mr-1" />
                   Dedicatória para:
                 </p>
                 <div className="grid grid-cols-3 gap-4">
                   {['Noivo', 'Noiva', 'Ambos'].map(option => (
-                    <button
-                      key={option}
-                      onClick={() => setEditedComments({ ...editedComments, dedicatoria_para: option })}
-                      className={`p-3 rounded-lg border-2 font-semibold transition-colors
-                        ${editedComments.dedicatoria_para === option ? 'border-rose-500 bg-rose-100 text-rose-700' : 'border-gray-300 hover:border-rose-400 bg-white text-gray-700'}`}
-                    >
-                      {option}
-                    </button>
+                    <div key={option}>
+                      <input
+                        type="radio"
+                        id={`dedicatoria-${option}`}
+                        name="dedicatoria_para"
+                        value={option}
+                        defaultChecked={guest["dedicatória_para"] === option}
+                        className="hidden peer"
+                      />
+                      <label
+                        htmlFor={`dedicatoria-${option}`}
+                        className="p-3 rounded-lg border-2 font-semibold transition-colors cursor-pointer block text-center
+                          peer-checked:border-rose-500 peer-checked:bg-rose-100 peer-checked:text-rose-700
+                          border-gray-300 hover:border-rose-400 bg-white text-gray-700"
+                      >
+                        {option}
+                      </label>
+                    </div>
                   ))}
                 </div>
                 <InputItem
                   label="Comentário 1"
-                  value={editedComments.comentario1}
-                  onChange={(e) => setEditedComments({ ...editedComments, comentario1: e.target.value })}
+                  name="comentario1"
+                  defaultValue={guest.comentário1 || ''}
                   icon={<BookmarkIcon />}
                 />
                 <InputItem
                   label="Comentário 2"
-                  value={editedComments.comentario2}
-                  onChange={(e) => setEditedComments({ ...editedComments, comentario2: e.target.value })}
+                  name="comentario2"
+                  defaultValue={guest.comentário2 || ''}
                   icon={<BookmarkIcon />}
                 />
                 <motion.button
-                  onClick={handleSaveComments}
-                  disabled={loading}
+                  type="submit"
+                  disabled={mutation.isPending}
                   className="w-full bg-rose-600 text-white font-bold py-3 rounded-lg hover:bg-rose-700 disabled:opacity-50 flex items-center justify-center transition"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
                   <ClipboardDocumentCheckIcon className="h-5 w-5 mr-2" />
-                  {loading ? 'Salvando...' : 'Salvar Comentários'}
+                  {mutation.isPending ? 'Salvando...' : 'Salvar Comentários'}
                 </motion.button>
-              </div>
+              </form>
             ) : (
               <div className="space-y-4">
                 <InfoItem label="Dedicatória" value={guest["dedicatória_para"] || '—'} icon={<HeartIcon />} />
@@ -301,11 +294,11 @@ const AdminGuestDetails: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {!isConfirmed && (
                 <ActionButton
-                  onClick={() => handleAction('confirmAttendance', { confirmou: 'sim', "dedicatória_para": guest["dedicatória_para"], comentário1: guest.comentário1, comentário2: guest.comentário2 })}
+                  onClick={() => handleAction('confirmAttendance', { confirmou: 'sim' })}
                   label="Confirmar Presença"
                   icon={<CheckCircleIcon />}
                   color="bg-green-600 hover:bg-green-700"
-                  loading={loading}
+                  loading={mutation.isPending}
                   loadingText="Confirmando..."
                 />
               )}
@@ -315,7 +308,7 @@ const AdminGuestDetails: React.FC = () => {
                   label="Confirmar Chegada"
                   icon={<ArrowRightOnRectangleIcon />}
                   color="bg-purple-600 hover:bg-purple-700"
-                  loading={loading}
+                  loading={mutation.isPending}
                   loadingText="Checando..."
                 />
               )}
@@ -325,11 +318,11 @@ const AdminGuestDetails: React.FC = () => {
                   label="Desfazer Chegada"
                   icon={<ArrowUturnLeftIcon />}
                   color="bg-red-600 hover:bg-red-700"
-                  loading={loading}
+                  loading={mutation.isPending}
                   loadingText="Revertendo..."
                 />
               )}
-              <div className="hidden sm:block"> {/* Esconde o botão em telas pequenas para evitar duplicação */}
+              <div className="hidden sm:block">
                 <ActionButton
                   onClick={() => navigate(-1)}
                   label="Voltar para a Lista"
@@ -371,7 +364,7 @@ const AdminGuestDetails: React.FC = () => {
   );
 };
 
-// Componentes auxiliares (InfoItem, InputItem, ActionButton, Divider) permanecem os mesmos
+// Componentes auxiliares
 const InfoItem: React.FC<{ label: string; value: string; isMonospace?: boolean; icon?: React.ReactNode }> = ({ label, value, isMonospace = false, icon }) => (
   <div className="flex items-center space-x-3 bg-gray-50 p-4 rounded-xl border border-gray-200">
     {icon && React.cloneElement(icon as React.ReactElement, { className: 'h-6 w-6 text-rose-500' })}
@@ -384,15 +377,16 @@ const InfoItem: React.FC<{ label: string; value: string; isMonospace?: boolean; 
   </div>
 );
 
-const InputItem: React.FC<{ label: string; value: string; onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void; icon?: React.ReactNode }> = ({ label, value, onChange, icon }) => (
+const InputItem: React.FC<{ label: string; name: string; defaultValue: string; icon?: React.ReactNode }> = ({ label, name, defaultValue, icon }) => (
   <div className="w-full">
-    <label className="text-sm font-semibold text-gray-600 block mb-1 flex items-center">
+    <label htmlFor={name} className="text-sm font-semibold text-gray-600  mb-1 flex items-center">
       {icon && React.cloneElement(icon as React.ReactElement, { className: 'h-4 w-4 mr-1 text-rose-500' })}
       {label}
     </label>
     <textarea
-      value={value}
-      onChange={onChange}
+      id={name}
+      name={name}
+      defaultValue={defaultValue}
       rows={3}
       className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 text-gray-800 transition"
       placeholder={`Insira aqui a ${label.toLowerCase()}...`}
