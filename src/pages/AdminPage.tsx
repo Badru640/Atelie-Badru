@@ -36,14 +36,24 @@ const LINK_CONVITE = 'https://ateliebadru.vercel.app/convidado';
 
 // Tipagem corrigida para os parâmetros 'nome' e 'id'
 const getWhatsAppLink = (nome: string, id: string): string => {
-  const msg = encodeURIComponent(`🎉 Olá, *${nome}*! 🎉
+  const msg = encodeURIComponent(`Olá, *${nome}*,
 
-É com imensa alegria que convidamos você para o nosso casamento!
+É com grande alegria que convidamos você para o nosso casamento.
 
-Acesse o convite online e **confirme sua presença** através do link abaixo:
+Para a organização do evento, a **confirmação de sua presença é obrigatória**. Por favor, acesse o convite digital para:
+
+1. **Confirmar sua presença.**
+2. Acessar os **detalhes completos** do local e horários.
+3. Deixar uma **mensagem especial** para nós.
+
 🔗 ${LINK_CONVITE}/${id}
 
-Mal podemos esperar para comemorar com você! ✨`);
+No dia do evento, use este mesmo link para obter seu **código QR**, que será sua credencial de acesso.
+
+Será uma honra celebrar este momento com você.
+
+Atenciosamente,
+Horst & Núbia`);
   return `https://wa.me/?text=${msg}`;
 };
 
