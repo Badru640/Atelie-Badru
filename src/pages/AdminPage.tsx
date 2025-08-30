@@ -15,6 +15,7 @@ import {
   MessageSquare,
   Repeat2,
   MoreHorizontal,
+  FilterX,
 } from 'lucide-react';
 import AdminLoadingScreen from '../components/loadingscreen';
 import GuestCharts from '../components/grafics';
@@ -38,14 +39,18 @@ const LINK_CONVITE = 'https://ateliebadru.vercel.app/convidado';
 const getWhatsAppLink = (nome: string, id: string): string => {
   const msg = encodeURIComponent(`Olá, *${nome}*,
 
-A felicidade é completa quando compartilhada! Convidamos você para nosso casamento.
+Convidamos você para nosso casamento.
 
-A **confirmação de presença é obrigatória** para nossa organização. Por favor, acesse o link para confirmar sua presença, ver os detalhes do evento e deixar uma mensagem para nós.
+A **confirmação de sua presença é indispensável** para a organização do evento. 
+Por favor, acesse o convite digital, onde você poderá:
+
+1.  Confirmar sua presença.
+2.  Consultar os detalhes sobre o local e horários.
+3.  Deixar uma mensagem especial para nós.
+
 🔗 ${LINK_CONVITE}/${id}
 
-No dia da celebração, este link dará acesso ao seu **código QR**, sua credencial de entrada.
-
-Mal podemos esperar para ter você conosco!
+Lembre-se de salvar este link. No dia do evento, ele será sua credencial de acesso via **código QR**.
 
 Horst & Núbia`);
   return `https://wa.me/?text=${msg}`;
@@ -153,6 +158,16 @@ const AdminPage = () => {
     { label: 'Não Chegaram', value: stats.naoChegaram, key: 'nao-chegou' },
   ];
 
+  const hasActiveFilters = search || statusFilter || ladoFilter || familiaFilter;
+
+  const handleClearFilters = () => {
+    setSearch('');
+    setStatusFilter('');
+    setLadoFilter('');
+    setFamiliaFilter('');
+    localStorage.removeItem('admin-state');
+  };
+
   const mutation = useMutation({
     mutationFn: (id: string) => { // Tipagem corrigida para o parâmetro 'id'
       return fetch(API, {
@@ -196,7 +211,7 @@ const AdminPage = () => {
 
   if (isLoading) return <AdminLoadingScreen />;
   return (
-    <div className="max-w-7xl mx-auto px-2 py-6">
+    <div className="max-w-7xl mx-auto px-1 py-6 pb-10">
       <h1 className="text-3xl font-bold text-rose-700 mb-6 text-center">Painel de Convidados</h1>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 mb-8">
@@ -213,7 +228,6 @@ const AdminPage = () => {
         ))}
       </div>
    
-
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         <input
           type="text"
@@ -225,7 +239,7 @@ const AdminPage = () => {
         <select
           value={ladoFilter}
           onChange={(e) => setLadoFilter(e.target.value)}
-          className="w-full md:w-48 px-3 py-2 border rounded"
+          className="w-full md:w-48 px-4 py-2 border rounded shadow focus:outline-none focus:ring-2 focus:ring-rose-300 appearance-none bg-white pr-8" // Added appearance-none and pr-8
         >
           <option value="">Todos os lados</option>
           <option value="noiva">Lado da Noiva</option>
@@ -234,13 +248,25 @@ const AdminPage = () => {
         <select
           value={familiaFilter}
           onChange={(e) => setFamiliaFilter(e.target.value)}
-          className="w-full md:w-48 px-3 py-2 border rounded"
+          className="w-full md:w-48 px-4 py-2 border rounded shadow focus:outline-none focus:ring-2 focus:ring-rose-300 appearance-none bg-white pr-8" // Added appearance-none and pr-8
         >
           <option value="">Todas as famílias</option>
           {allFamilias.map(f => <option key={f} value={f}>{f}</option>)}
         </select>
+        {hasActiveFilters && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: "spring", stiffness: 400, damping: 20 }}
+            onClick={handleClearFilters}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-rose-500 text-white rounded shadow hover:bg-rose-600 transition"
+          >
+            <FilterX size={20} /> Limpar Filtros
+          </motion.button>
+        )}
       </div>
 
+    
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         {filteredGuests.map((g: Guest) => {
           const isConfirmed = g.confirmou?.toLowerCase() === 'sim';
@@ -318,10 +344,13 @@ const AdminPage = () => {
           );
         })}
       </div>
-         
-      {/* Novo componente de gráficos */}
-      <GuestCharts guests={guests} />
 
+        {/* Conditionally render GuestCharts */}
+        {!hasActiveFilters && (
+        <GuestCharts guests={guests} />
+      )}
+
+         
       {/* Guia de Filtros Mobile */}
       <motion.div
         className=" fixed bottom-0 left-0 right-0 z-50 bg-white/90 p-1 shadow-top-md border-t-2 border-rose-300 backdrop-blur-sm"
@@ -333,24 +362,24 @@ const AdminPage = () => {
           {/* Botão Todos */}
           <motion.div
             className="flex flex-col items-center cursor-pointer p-1"
-            onClick={() => setStatusFilter('')}
+            onClick={() => handleClearFilters()}
           >
             <motion.div
               className={`w-1 h-1 rounded-full mb-1 transition-colors duration-300`}
               animate={{
-                scale: !statusFilter && !ladoFilter && !familiaFilter ? 1.8 : 1,
-                backgroundColor: !statusFilter && !ladoFilter && !familiaFilter ? '#E11D48' : '#9CA3AF',
+                scale: !statusFilter && !ladoFilter && !familiaFilter && !search ? 1.8 : 1,
+                backgroundColor: !statusFilter && !ladoFilter && !familiaFilter && !search ? '#E11D48' : '#9CA3AF',
               }}
               transition={{ type: 'spring', stiffness: 400, damping: 20 }}
             />
             <Users
               size={20}
-              className={`h-5 w-5 ${!statusFilter && !ladoFilter && !familiaFilter ? 'text-rose-600' : 'text-gray-400'}`}
+              className={`h-5 w-5 ${!statusFilter && !ladoFilter && !familiaFilter && !search ? 'text-rose-600' : 'text-gray-400'}`}
             />
             <motion.span
               className="text-xs font-semibold mt-1"
               animate={{
-                color: !statusFilter && !ladoFilter && !familiaFilter ? '#E11D48' : '#9CA3AF',
+                color: !statusFilter && !ladoFilter && !familiaFilter && !search ? '#E11D48' : '#9CA3AF',
               }}
             >
               Todos
@@ -360,7 +389,12 @@ const AdminPage = () => {
           {/* Botão Confirmados */}
           <motion.div
             className="flex flex-col items-center cursor-pointer p-1"
-            onClick={() => setStatusFilter('confirmado')}
+            onClick={() => {
+              setSearch('');
+              setLadoFilter('');
+              setFamiliaFilter('');
+              setStatusFilter('confirmado');
+            }}
           >
             <motion.div
               className={`w-1 h-1 rounded-full mb-1 transition-colors duration-300`}
@@ -387,7 +421,12 @@ const AdminPage = () => {
           {/* Botão Convites NÃO Enviados */}
           <motion.div
             className="flex flex-col items-center cursor-pointer p-1"
-            onClick={() => setStatusFilter('nao-enviado')}
+            onClick={() => {
+              setSearch('');
+              setLadoFilter('');
+              setFamiliaFilter('');
+              setStatusFilter('nao-enviado');
+            }}
           >
             <motion.div
               className={`w-1 h-1 rounded-full mb-1 transition-colors duration-300`}
@@ -414,7 +453,12 @@ const AdminPage = () => {
           {/* Botão Convites Enviados */}
           <motion.div
             className="flex flex-col items-center cursor-pointer p-1"
-            onClick={() => setStatusFilter('convite-enviado')}
+            onClick={() => {
+              setSearch('');
+              setLadoFilter('');
+              setFamiliaFilter('');
+              setStatusFilter('convite-enviado');
+            }}
           >
             <motion.div
               className={`w-1 h-1 rounded-full mb-1 transition-colors duration-300`}
