@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -55,37 +55,104 @@ Horst & Núbia`);
   return `https://wa.me/?text=${msg}`;
 };
 
+// Componente individual para cada convidado, otimizado com React.memo
+const GuestCard = React.memo(({ guest, onNavigate, onSendInvite }: {
+  guest: Guest;
+  onNavigate: (g: Guest) => void;
+  onSendInvite: (g: Guest) => void;
+}) => {
+  const isConfirmed = guest.confirmou?.toLowerCase() === 'sim';
+  const isInvitationSent = guest.convite_enviado?.toLowerCase() === 'sim';
+
+  return (
+    <div
+      onClick={() => onNavigate(guest)}
+      className={`rounded-xl p-6 shadow-md transition cursor-pointer
+        ${isConfirmed ? 'border-2 border-blue-500 bg-blue-100' : 'border border-gray-300 bg-white'}
+        hover:shadow-lg hover:border-rose-400`}
+    >
+      <div className="flex flex-col mb-4">
+        <div className="flex items-center gap-2">
+          {isConfirmed ? <CheckCircle size={24} className="text-green-600" /> : <XCircle size={24} className="text-red-400" />}
+          <h2 className="text-2xl font-bold text-gray-800">{guest.nome}</h2>
+        </div>
+        <div className="flex justify-center mt-1">
+          <span className={`px-3 py-1 rounded-full text-sm font-semibold tracking-wide ${isInvitationSent ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
+            {isInvitationSent ? 'Convite Enviado' : 'Não Enviado'}
+          </span>
+        </div>
+      </div>
+      <hr className="my-3 border-t border-gray-200" />
+      <div className="grid grid-cols-2 gap-4 text-sm text-gray-700 mb-4">
+        <div className="flex items-center gap-2">
+          <Users size={16} className="text-gray-500" />
+          <div>
+            <div className="font-semibold">Família</div>
+            <div>{guest.familia || '—'}</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <UsersRound size={16} className="text-gray-500" />
+          <div>
+            <div className="font-semibold">Lado</div>
+            <div>{guest.lado || '—'}</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Table2 size={16} className="text-gray-500" />
+          <div>
+            <div className="font-semibold">Mesa</div>
+            <div>{guest.mesa || '—'}</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <DoorOpen size={16} className="text-gray-500" />
+          <div>
+            <div className="font-semibold">Chegou</div>
+            <div className={guest.chegou ? 'text-green-600' : 'text-red-400'}>{guest.chegou ? 'Sim' : 'Não'}</div>
+          </div>
+        </div>
+      </div>
+      <div className="mt-4 flex gap-2">
+        <button
+          onClick={(e) => { e.stopPropagation(); onNavigate(guest); }}
+          className="w-1/2 flex justify-center items-center gap-2 px-4 py-2 text-rose-500 border border-rose-500 rounded-full text-sm hover:bg-rose-50 hover:text-rose-600 transition"
+        >
+          <MoreHorizontal size={16} /> Ver Detalhes
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onSendInvite(guest);
+          }}
+          className={`w-1/2 flex justify-center items-center gap-2 px-4 py-2 text-white rounded-full text-sm ${isInvitationSent ? 'bg-rose-400 hover:bg-rose-500' : 'bg-green-500 hover:bg-green-600'}`}
+        >
+          {isInvitationSent ? <Repeat2 size={16} /> : <MessageSquare size={16} />} 
+          {isInvitationSent ? 'Re-enviar' : 'Enviar'}
+        </button>
+      </div>
+    </div>
+  );
+});
+
 const AdminPage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const savedState = JSON.parse(localStorage.getItem('admin-state') || '{}');
+  // Mantenha o estado dos filtros em localStorage para persistência
+  const savedState = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem('admin-state') || '{}');
+    } catch {
+      return {};
+    }
+  }, []);
   
   const [search, setSearch] = useState<string>(savedState.search || '');
   const [statusFilter, setStatusFilter] = useState<string>(savedState.statusFilter || '');
   const [ladoFilter, setLadoFilter] = useState<string>(savedState.ladoFilter || '');
   const [familiaFilter, setFamiliaFilter] = useState<string>(savedState.familiaFilter || '');
   const [scrollY, setScrollY] = useState<number>(savedState.scrollY || 0);
-
-  useEffect(() => {
-    const currentState = JSON.parse(localStorage.getItem('admin-state') || '{}');
-    localStorage.setItem('admin-state', JSON.stringify({ ...currentState, search }));
-  }, [search]);
-
-  useEffect(() => {
-    const currentState = JSON.parse(localStorage.getItem('admin-state') || '{}');
-    localStorage.setItem('admin-state', JSON.stringify({ ...currentState, statusFilter }));
-  }, [statusFilter]);
-  
-  useEffect(() => {
-    const currentState = JSON.parse(localStorage.getItem('admin-state') || '{}');
-    localStorage.setItem('admin-state', JSON.stringify({ ...currentState, ladoFilter }));
-  }, [ladoFilter]);
-
-  useEffect(() => {
-    const currentState = JSON.parse(localStorage.getItem('admin-state') || '{}');
-    localStorage.setItem('admin-state', JSON.stringify({ ...currentState, familiaFilter }));
-  }, [familiaFilter]);
 
   useEffect(() => {
     if (scrollY) {
@@ -97,6 +164,7 @@ const AdminPage = () => {
     queryKey: ['all-guests'],
     queryFn: async () => {
       const res = await fetch(`${API}?action=getAllGuests`);
+      if (!res.ok) throw new Error('Network response was not ok');
       return res.json();
     },
     refetchOnReconnect: true,
@@ -122,7 +190,15 @@ const AdminPage = () => {
   }, [guests]);
 
   const filteredGuests = useMemo(() => {
-    return guests.filter((g) => {
+    const sortedGuests = [...guests].sort((a, b) => {
+      const aSent = a.convite_enviado?.toLowerCase() === 'sim';
+      const bSent = b.convite_enviado?.toLowerCase() === 'sim';
+      if (aSent && !bSent) return 1;
+      if (!aSent && bSent) return -1;
+      return 0;
+    });
+
+    return sortedGuests.filter((g) => {
       const name = removeAccents((g.nome || '').toLowerCase());
       const familia = removeAccents((g.familia || '').toLowerCase());
       const matchSearch = name.includes(removeAccents(search.toLowerCase()));
@@ -138,12 +214,6 @@ const AdminPage = () => {
         (statusFilter === 'nao-enviado' && g.convite_enviado?.toLowerCase() !== 'sim');
 
       return matchSearch && matchStatus && matchLado && matchFamilia;
-    }).sort((a: Guest, b: Guest) => { // Tipagem corrigida para os parâmetros 'a' e 'b'
-      const aSent = a.convite_enviado?.toLowerCase() === 'sim';
-      const bSent = b.convite_enviado?.toLowerCase() === 'sim';
-      if (aSent && !bSent) return 1;
-      if (!aSent && bSent) return -1;
-      return 0;
     });
   }, [guests, search, statusFilter, ladoFilter, familiaFilter]);
 
@@ -159,16 +229,16 @@ const AdminPage = () => {
 
   const hasActiveFilters = search || statusFilter || ladoFilter || familiaFilter;
 
-  const handleClearFilters = () => {
+  const handleClearFilters = useCallback(() => {
     setSearch('');
     setStatusFilter('');
     setLadoFilter('');
     setFamiliaFilter('');
     localStorage.removeItem('admin-state');
-  };
+  }, []);
 
   const mutation = useMutation({
-    mutationFn: (id: string) => { // Tipagem corrigida para o parâmetro 'id'
+    mutationFn: (id: string) => {
       return fetch(API, {
         method: 'POST',
         body: JSON.stringify({ action: 'markInvitationSent', id: id }),
@@ -176,7 +246,7 @@ const AdminPage = () => {
     },
     onSuccess: (data, id) => {
       if (data.success) {
-        toast.success(`Convite de ${filteredGuests.find(g => g.id === id)?.nome} marcado como enviado!`);
+        toast.success(`Convite marcado como enviado!`);
         queryClient.invalidateQueries({ queryKey: ['all-guests'] });
       } else {
         toast.error('Erro ao marcar convite. Tente novamente.');
@@ -187,7 +257,7 @@ const AdminPage = () => {
     },
   });
 
-  const handleNavigate = (g: Guest) => {
+  const handleNavigate = useCallback((g: Guest) => {
     localStorage.setItem(
       'admin-state',
       JSON.stringify({
@@ -199,14 +269,14 @@ const AdminPage = () => {
       })
     );
     navigate(`/admin/${g.id}`, { state: { guest: g } });
-  };
+  }, [search, statusFilter, ladoFilter, familiaFilter, navigate]);
 
-  const handleEnviarConvite = (g: Guest) => {
+  const handleEnviarConvite = useCallback((g: Guest) => {
     if (!g?.id || !g?.nome) return;
     const link = getWhatsAppLink(g.nome, g.id);
     window.open(link, '_blank');
     mutation.mutate(g.id);
-  };
+  }, [mutation]);
 
   if (isLoading) return <AdminLoadingScreen />;
   return (
@@ -216,7 +286,7 @@ const AdminPage = () => {
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 mb-8">
         {statusCards.map(({ label, value, key }) => (
           <button
-            key={label}
+            key={key}
             onClick={() => setStatusFilter(key === statusFilter ? '' : key)}
             className={`flex flex-col items-center justify-center p-4 rounded-xl shadow transition border-2
               ${statusFilter === key ? 'bg-rose-500 text-white border-rose-500' : 'bg-white text-gray-700 border-gray-200 hover:shadow-lg'}`}
@@ -238,7 +308,7 @@ const AdminPage = () => {
         <select
           value={ladoFilter}
           onChange={(e) => setLadoFilter(e.target.value)}
-          className="w-full md:w-48 px-4 py-2 border rounded shadow focus:outline-none focus:ring-2 focus:ring-rose-300 appearance-none bg-white pr-8" // Added appearance-none and pr-8
+          className="w-full md:w-48 px-4 py-2 border rounded shadow focus:outline-none focus:ring-2 focus:ring-rose-300 appearance-none bg-white pr-8"
         >
           <option value="">Todos os lados</option>
           <option value="noiva">Lado da Noiva</option>
@@ -247,7 +317,7 @@ const AdminPage = () => {
         <select
           value={familiaFilter}
           onChange={(e) => setFamiliaFilter(e.target.value)}
-          className="w-full md:w-48 px-4 py-2 border rounded shadow focus:outline-none focus:ring-2 focus:ring-rose-300 appearance-none bg-white pr-8" // Added appearance-none and pr-8
+          className="w-full md:w-48 px-4 py-2 border rounded shadow focus:outline-none focus:ring-2 focus:ring-rose-300 appearance-none bg-white pr-8"
         >
           <option value="">Todas as famílias</option>
           {allFamilias.map(f => <option key={f} value={f}>{f}</option>)}
@@ -265,90 +335,21 @@ const AdminPage = () => {
         )}
       </div>
 
-    
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        {filteredGuests.map((g: Guest) => {
-          const isConfirmed = g.confirmou?.toLowerCase() === 'sim';
-          const isInvitationSent = g.convite_enviado?.toLowerCase() === 'sim';
-
-          return (
-            <div
-              key={g.id}
-              onClick={() => handleNavigate(g)}
-              className={`rounded-xl p-6 shadow-md transition cursor-pointer
-                ${isConfirmed ? 'border-2 border-blue-500 bg-blue-100' : 'border border-gray-300 bg-white'}
-                hover:shadow-lg hover:border-rose-400`}
-            >
-              <div className="flex flex-col mb-4">
-                <div className="flex items-center gap-2">
-                  {isConfirmed ? <CheckCircle size={24} className="text-green-600" /> : <XCircle size={24} className="text-red-400" />}
-                  <h2 className="text-2xl font-bold text-gray-800">{g.nome}</h2>
-                </div>
-                <div className="flex justify-center mt-1">
-                  <span className={`px-3 py-1 rounded-full text-sm font-semibold tracking-wide ${isInvitationSent ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
-                    {isInvitationSent ? 'Convite Enviado' : 'Não Enviado'}
-                  </span>
-                </div>
-              </div>
-              <hr className="my-3 border-t border-gray-200" />
-              <div className="grid grid-cols-2 gap-4 text-sm text-gray-700 mb-4">
-                <div className="flex items-center gap-2">
-                  <Users size={16} className="text-gray-500" />
-                  <div>
-                    <div className="font-semibold">Família</div>
-                    <div>{g.familia || '—'}</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <UsersRound size={16} className="text-gray-500" />
-                  <div>
-                    <div className="font-semibold">Lado</div>
-                    <div>{g.lado || '—'}</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Table2 size={16} className="text-gray-500" />
-                  <div>
-                    <div className="font-semibold">Mesa</div>
-                    <div>{g.mesa || '—'}</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <DoorOpen size={16} className="text-gray-500" />
-                  <div>
-                    <div className="font-semibold">Chegou</div>
-                    <div className={g.chegou ? 'text-green-600' : 'text-red-400'}>{g.chegou ? 'Sim' : 'Não'}</div>
-                  </div>
-                </div>
-              </div>
-              <div className="mt-4 flex gap-2">
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleNavigate(g); }}
-                  className="w-1/2 flex justify-center items-center gap-2 px-4 py-2 text-rose-500 border border-rose-500 rounded-full text-sm hover:bg-rose-50 hover:text-rose-600 transition"
-                >
-                  <MoreHorizontal size={16} /> Ver Detalhes
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleEnviarConvite(g);
-                  }}
-                  className={`w-1/2 flex justify-center items-center gap-2 px-4 py-2 text-white rounded-full text-sm ${isInvitationSent ? 'bg-rose-400 hover:bg-rose-500' : 'bg-green-500 hover:bg-green-600'}`}
-                >
-                  {isInvitationSent ? <Repeat2 size={16} /> : <MessageSquare size={16} />} 
-                  {isInvitationSent ? 'Re-enviar' : 'Enviar'}
-                </button>
-              </div>
-            </div>
-          );
-        })}
+        {filteredGuests.map((guest) => (
+          <GuestCard 
+            key={guest.id} 
+            guest={guest} 
+            onNavigate={handleNavigate} 
+            onSendInvite={handleEnviarConvite} 
+          />
+        ))}
       </div>
 
-        {/* Conditionally render GuestCharts */}
-        {!hasActiveFilters && (
+      {/* Conditionally render GuestCharts */}
+      {!hasActiveFilters && (
         <GuestCharts guests={guests} />
       )}
-
          
       {/* Guia de Filtros Mobile */}
       <motion.div
@@ -361,24 +362,24 @@ const AdminPage = () => {
           {/* Botão Todos */}
           <motion.div
             className="flex flex-col items-center cursor-pointer p-1"
-            onClick={() => handleClearFilters()}
+            onClick={handleClearFilters}
           >
             <motion.div
               className={`w-1 h-1 rounded-full mb-1 transition-colors duration-300`}
               animate={{
-                scale: !statusFilter && !ladoFilter && !familiaFilter && !search ? 1.8 : 1,
-                backgroundColor: !statusFilter && !ladoFilter && !familiaFilter && !search ? '#E11D48' : '#9CA3AF',
+                scale: !hasActiveFilters ? 1.8 : 1,
+                backgroundColor: !hasActiveFilters ? '#E11D48' : '#9CA3AF',
               }}
               transition={{ type: 'spring', stiffness: 400, damping: 20 }}
             />
             <Users
               size={20}
-              className={`h-5 w-5 ${!statusFilter && !ladoFilter && !familiaFilter && !search ? 'text-rose-600' : 'text-gray-400'}`}
+              className={`h-5 w-5 ${!hasActiveFilters ? 'text-rose-600' : 'text-gray-400'}`}
             />
             <motion.span
               className="text-xs font-semibold mt-1"
               animate={{
-                color: !statusFilter && !ladoFilter && !familiaFilter && !search ? '#E11D48' : '#9CA3AF',
+                color: !hasActiveFilters ? '#E11D48' : '#9CA3AF',
               }}
             >
               Todos
