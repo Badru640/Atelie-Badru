@@ -146,7 +146,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ guestName, onViewI
     location: "Igreja Evangélica Luterana em Moçambique, Av. Kim il Sung, n.º 520 – Maputo",
     description: "Junte-se a nós para a Cerimônia Religiosa de casamento de Horst e Núbia!",
     date: '2025-10-11T10:00:00',
-    end: '2025-10-11T11:00:00'
+    end: '2025-10-11T12:00:00'
   };
 
   const RECEPTION = {
