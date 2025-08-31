@@ -352,7 +352,7 @@ const AdminPage = () => {
          
       {/* Guia de Filtros Mobile */}
       <motion.div
-        className=" fixed bottom-0 left-0 right-0 z-50 bg-white/90 p-1 shadow-top-md border-t-2 border-rose-300 backdrop-blur-sm"
+        className=" fixed bottom-0 left-0 right-0 z-40 bg-white/90 p-1 shadow-top-md border-t-2 border-rose-300 backdrop-blur-sm"
         initial={{ y: "100%" }}
         animate={{ y: "0%" }}
         transition={{ type: "spring", stiffness: 200, damping: 25 }}

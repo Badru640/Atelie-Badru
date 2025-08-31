@@ -14,10 +14,15 @@ const roleMap: Record<string, 'admin' | 'protocolo' | null> = {
 };
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, role }) => {
-  const userEmail = getUserEmail(); // ✅ função correta
+  const userEmail = getUserEmail();
   const userRole = userEmail ? roleMap[userEmail] : null;
 
-  if (!userRole || userRole !== role) {
+  // Lógica de permissão de acesso
+  // 1. O usuário deve ter um papel definido.
+  // 2. O papel do usuário deve corresponder ao papel da rota OU o usuário deve ser um admin.
+  const hasAccess = userRole && (userRole === role || userRole === 'admin');
+
+  if (!hasAccess) {
     return <Navigate to="/" replace />;
   }
 
