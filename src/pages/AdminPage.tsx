@@ -33,6 +33,7 @@ interface Guest {
 }
 
 const API = 'https://script.google.com/macros/s/AKfycbxsMqSeierihKZmpr7FLYYzL_6oAP8hX2BivXiRzcjeA6_btqG8otxctsorJ8abqNvJ/exec';
+
 const LINK_CONVITE = 'https://ateliebadru.vercel.app/convidado';
 
 const getWhatsAppLink = (nome: string, id: string): string => {
