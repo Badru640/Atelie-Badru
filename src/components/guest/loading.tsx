@@ -101,7 +101,8 @@ export default function LoadingScreen() {
       </div>
 
       {/* --- Inline Styles for Animations --- */}
-      <style jsx>{`
+      {/* 🛑 FIX: Changed <style jsx> to <style> and removed the 'jsx' prop. */}
+      <style>{`
         /* Spinner Animation: Gentle rotation for the loading indicator. */
         .animate-spin-slow {
           animation: spin 3s linear infinite;

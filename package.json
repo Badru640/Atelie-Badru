@@ -25,6 +25,7 @@
     "react-icons": "^5.5.0",
     "react-loader-spinner": "^6.1.6",
     "react-qr-barcode-scanner": "^2.1.10",
+    "react-qr-code": "^2.0.18",
     "react-qr-scanner": "^1.0.0-alpha.11",
     "react-responsive-carousel": "^3.2.23",
     "react-router-dom": "^6.14.2",

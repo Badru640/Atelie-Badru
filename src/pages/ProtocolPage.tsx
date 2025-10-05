@@ -16,7 +16,7 @@ import {
   UserMinusIcon,
 } from "@heroicons/react/24/outline";
 
-
+// ... Interfaces (mantidas) ...
 
 interface Guest {
   id: string;
@@ -34,26 +34,22 @@ const API =
 
 type FilterStatus = "all" | "chegou" | "nao-chegou";
 
-// --- NOVO: Interface para as estatísticas ---
 interface GuestStats {
   total: number;
   chegou: number;
   naoChegou: number;
 }
 
-// --- NOVO: Componente Botão de Filtro ---
 interface FilterButtonProps {
   label: string;
   value: number;
   isActive: boolean;
   onClick: () => void;
   icon: React.ElementType;
-  colorClass: string; // Ex: 'bg-blue-600'
+  colorClass: string;
 }
 
-
-
-const FilterButton: React.FC<FilterButtonProps> = ({
+const FilterButton: React.FC<FilterButtonProps> = React.memo(({
   label,
   value,
   isActive,
@@ -63,14 +59,14 @@ const FilterButton: React.FC<FilterButtonProps> = ({
 }) => (
   <button
     onClick={onClick}
-    className={`flex items-center justify-center space-x-2 p-3 sm:px-4 sm:py-2 rounded-full font-semibold transition-all duration-300 min-w-[120px] ${
+    className={`flex items-center justify-center space-x-2 p-2 sm:px-3 sm:py-2 rounded-full font-semibold transition-all duration-300 min-w-[100px] ${
       isActive
-        ? `${colorClass} text-white shadow-lg shadow-black/20 transform scale-[1.05]`
+        ? `${colorClass} text-white shadow-lg shadow-black/20 transform scale-[1.03]`
         : "bg-gray-200 text-gray-700 hover:bg-gray-300"
     }`}
   >
-    <Icon className="h-5 w-5" />
-    <span className="hidden sm:inline">{label}</span>
+    <Icon className="h-4 w-4" />
+    <span className="inline text-sm">{label}</span>
     <span
       className={`ml-1 px-2 py-0.5 text-xs rounded-full ${
         isActive
@@ -81,8 +77,96 @@ const FilterButton: React.FC<FilterButtonProps> = ({
       {value}
     </span>
   </button>
-);
-// --- FIM NOVO Componente Botão de Filtro ---
+));
+
+interface GuestCardProps {
+  guest: Guest;
+  navigate: ReturnType<typeof useNavigate>;
+}
+
+const GuestCard: React.FC<GuestCardProps> = React.memo(({ guest, navigate }) => {
+  const handleViewGuest = () => {
+    // Navega para a página de detalhes do convidado
+    navigate(`/protocolo/${guest.id}`, { state: guest });
+  };
+
+  const cardClasses = `
+    relative bg-white rounded-xl shadow-lg p-6 flex flex-col justify-between 
+    transition-all duration-300 transform 
+    hover:translate-y-[-3px] hover:shadow-2xl border-t-4 
+    will-change-transform cursor-pointer ${ // Adicionado cursor-pointer
+      guest.chegou ? "border-green-500" : "border-red-500"
+    }
+  `;
+
+  return (
+    <div
+      key={guest.id}
+      className={cardClasses}
+      onClick={handleViewGuest} // Permite clicar em todo o card para navegar
+    >
+      {/* Status de Check-in (Badge) */}
+      {guest.chegou ? (
+        <div className="absolute top-4 right-4 bg-green-500 text-white rounded-full px-3 py-1 text-xs font-bold flex items-center shadow-md">
+          <CheckCircleIcon className="h-4 w-4 mr-1" />
+          Check-in OK
+        </div>
+      ) : (
+        <div className="absolute top-4 right-4 bg-red-500 text-white rounded-full px-3 py-1 text-xs font-bold flex items-center shadow-md">
+          <XCircleIcon className="h-4 w-4 mr-1" />
+          Aguardando
+        </div>
+      )}
+      
+      <div className="flex-1">
+        <h2 className="text-2xl font-bold text-gray-800 mb-1 leading-snug">
+          {guest.nome}
+        </h2>
+        <p className="text-sm font-medium text-cyan-600 mb-4 border-b border-gray-100 pb-2">
+          {guest.familia || "Família Não Identificada"}
+        </p>
+        <div className="mt-2 space-y-2 text-sm text-gray-600">
+          <div className="flex items-center">
+            <TableCellsIcon className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
+            <span>
+              Mesa:{" "}
+              <span className="font-semibold text-gray-800">
+                {guest.mesa || "N/A"}
+              </span>
+            </span>
+          </div>
+          <div className="flex items-center">
+            <CalendarDaysIcon className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
+            <span>
+              Lado:{" "}
+              <span className="font-semibold text-gray-800">
+                {guest.lado || "N/A"}
+              </span>
+            </span>
+          </div>
+          <div className="flex items-center">
+            <UsersIcon className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
+            <span className="font-medium">
+              {guest.acompanhantes && guest.acompanhantes !== "0"
+                ? `+ 1 Acompanhante`
+                : "Individual"}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Mantido o botão como fallback/claro para UX, mas o clique no div é o principal */}
+      <button
+        onClick={handleViewGuest}
+        className="mt-6 w-full py-3 bg-gradient-to-r from-cyan-500 to-teal-500 text-white font-semibold rounded-lg shadow-md transition-all duration-300 hover:opacity-90 transform hover:scale-[1.01] hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-teal-500/50"
+      >
+        Verificar Convidado
+      </button>
+    </div>
+  );
+});
+
+// --- Componente Principal ---
 
 const ProtocolPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -90,6 +174,12 @@ const ProtocolPage: React.FC = () => {
   const [openScanner, setOpenScanner] = useState<boolean>(false);
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const navigate = useNavigate();
+
+  // Função utilitária para normalizar strings, removendo acentos (diacríticos)
+  const normalizeString = (str: string | undefined): string => {
+    if (!str) return '';
+    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  };
 
   // Debounce logic
   useEffect(() => {
@@ -110,25 +200,25 @@ const ProtocolPage: React.FC = () => {
       return Array.isArray(json) ? (json as Guest[]) : [];
     },
   });
-    // --- NOVO: Cálculo de Estatísticas de Convidados ---
-    const guestStats = useMemo<GuestStats>(() => {
-      const total = guests.length;
-      const chegou = guests.filter((g) => g.chegou).length;
-      const naoChegou = total - chegou;
-      return { total, chegou, naoChegou };
-    }, [guests]);
-    // --- FIM NOVO Cálculo de Estatísticas ---
-  
 
+  const guestStats = useMemo<GuestStats>(() => {
+    const total = guests.length;
+    const chegou = guests.filter((g) => g.chegou).length;
+    const naoChegou = total - chegou;
+    return { total, chegou, naoChegou };
+  }, [guests]);
+
+  // Filtros e Ordenação
   const sortedAndFilteredGuests = useMemo(() => {
-    const term = debouncedSearch.toLowerCase();
+    const normalizedTerm = normalizeString(debouncedSearch);
 
-    // 1. Filtragem por busca (nome, id, etc.)
+    // 1. Filtragem por busca (nome, id, etc.) - AGORA SEM ACENTOS
     const searched = guests.filter((g) => {
-      const nomeMatch = g.nome?.toLowerCase().includes(term);
-      const idMatch = g.id?.toLowerCase().includes(term);
-      const familiaMatch = g.familia?.toLowerCase().includes(term);
-      const acompanhantesMatch = g.acompanhantes?.toLowerCase().includes(term);
+      const nomeMatch = normalizeString(g.nome).includes(normalizedTerm);
+      const idMatch = normalizeString(g.id).includes(normalizedTerm);
+      const familiaMatch = normalizeString(g.familia).includes(normalizedTerm);
+      const acompanhantesMatch = normalizeString(g.acompanhantes).includes(normalizedTerm);
+      
       return nomeMatch || idMatch || familiaMatch || acompanhantesMatch;
     });
 
@@ -139,10 +229,10 @@ const ProtocolPage: React.FC = () => {
       return true;
     });
 
-    // 3. Ordenação: Não Chegou primeiro
+    // 3. Ordenação: Chegou por último (Não Chegou primeiro)
     return [...statusFiltered].sort((a, b) => {
-      if (!a.chegou && b.chegou) return -1;
-      if (a.chegou && !b.chegou) return 1;
+      if (!a.chegou && b.chegou) return -1; 
+      if (a.chegou && !b.chegou) return 1;  
       return 0;
     });
   }, [guests, debouncedSearch, filterStatus]);
@@ -168,7 +258,7 @@ const ProtocolPage: React.FC = () => {
   if (isLoading) {
     return <ProtocolLoadingScreen />;
   }
-  // --- Configuração dos Filtros para o Botão Novo ---
+
   const filterOptions = [
     {
       label: "Todos",
@@ -194,132 +284,65 @@ const ProtocolPage: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 pb-28"> {/* Aumentado o pb para evitar sobreposição com o rodapé fixo */}
-      
-    {/* HEADER EM TELA CHEIA */}
-    <header className="relative w-full h-60 md:h-72 lg:h-80 shadow-xl overflow-hidden">
-      {/* Imagem de Fundo Profissional */}
-      <img
-        src="https://lets.events/blog/wp-content/uploads/2018/04/Seguran-a-evento.jpg"
-        alt="Segurança e Recepção de Eventos"
-        className="absolute inset-0 w-full h-full object-cover object-center scale-105 transition-transform duration-500" // Pequeno scale e transition para efeito mais elegante
-      />
-      {/* Camada de Gradiente Escuro (Overlay) */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent"></div>
-      <div className="relative h-full flex flex-col items-center justify-center text-center px-4">
-        <h1 className="text-4xl md:text-5xl font-extrabold text-white drop-shadow-2xl tracking-tight">
-          Protocolo
-        </h1>
-        <p className="text-lg md:text-xl text-gray-200 mt-2 drop-shadow-lg">
-          Gestão eficiente de convidados.
-        </p>
-      </div>
-    </header>
+    <div className="min-h-screen bg-gray-50 text-gray-900 pb-28">
+      {/* HEADER EM TELA CHEIA */}
+      <header className="relative w-full h-60 md:h-72 lg:h-80 shadow-xl overflow-hidden">
+        <img
+          src="https://lets.events/blog/wp-content/uploads/2018/04/Seguran-a-evento.jpg"
+          alt="Segurança e Recepção de Eventos"
+          className="absolute inset-0 w-full h-full object-cover object-center scale-105 transition-transform duration-500"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent"></div>
+        <div className="relative h-full flex flex-col items-center justify-center text-center px-4">
+          <h1 className="text-4xl md:text-5xl font-extrabold text-white drop-shadow-2xl tracking-tight">
+            Protocolo
+          </h1>
+          <p className="text-lg md:text-xl text-gray-200 mt-2 drop-shadow-lg">
+            Gestão eficiente de convidados.
+          </p>
+        </div>
+      </header>
 
-    {/* Conteúdo principal centralizado */}
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10 relative "> {/* -mt-10 para sobrepor levemente o header */}
+      {/* Conteúdo principal centralizado */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 -mt-16 relative ">
 
-      {/* Botões de Filtro ATUALIZADOS com Contagem */}
-      <div className="flex flex-wrap justify-center gap-4 p-5 bg-white/95 backdrop-blur-sm rounded-3xl 
-                  shadow-2xl ring-2 ring-gray-100 transform transition-all duration-300 hover:shadow-3xl">
-        {filterOptions.map((option) => (
-          <FilterButton
-            key={option.key}
-            label={option.label}
-            value={option.value}
-            isActive={filterStatus === option.key}
-            onClick={() => setFilterStatus(option.key as FilterStatus)}
-            icon={option.icon}
-            colorClass={option.colorClass}
-          />
-        ))}
-      </div>
+        {/* Botões de Filtro */}
+        <div className="flex flex-wrap justify-center gap-4 p-3 bg-white/65 backdrop-blur-sm rounded-3xl 
+                      shadow-2xl ring-2 ring-gray-300 transform transition-all duration-300 hover:shadow-3xl">
+          {filterOptions.map((option) => (
+            <FilterButton
+              key={option.key}
+              label={option.label}
+              value={option.value}
+              isActive={filterStatus === option.key}
+              onClick={() => setFilterStatus(option.key as FilterStatus)}
+              icon={option.icon}
+              colorClass={option.colorClass}
+            />
+          ))}
+        </div>
 
-      {/* Barra de Busca (Visualmente mais integrada) */}
-      <div className="mb-10 block md:hidden">
-        {/* A barra de busca do rodapé já serve, mas mantemos a mensagem de erro aqui */}
-      </div>
+        <div className="mb-10 block md:hidden"></div>
 
         {sortedAndFilteredGuests.length === 0 ? (
           <div className="text-center py-10">
             <p className="text-lg text-gray-600">Nenhum convidado encontrado.</p>
           </div>
         ) : (
-          /* Grid de Convidados - Responsivo */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          /* Grid de Convidados */
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 sm:mt-12 gap-6">
             {sortedAndFilteredGuests.map((guest) => (
-              <div
-                key={guest.id}
-                className={`relative bg-white rounded-xl shadow-lg p-6 flex flex-col justify-between transition-all duration-300 transform hover:scale-[1.02] hover:shadow-2xl border-t-4 ${
-                  guest.chegou ? "border-green-500" : "border-red-500"
-                }`}
-              >
-                {/* Status de Check-in (Badge) */}
-                {guest.chegou ? (
-                  <div className="absolute top-4 right-4 bg-green-500 text-white rounded-full px-3 py-1 text-xs font-bold flex items-center shadow-md">
-                    <CheckCircleIcon className="h-4 w-4 mr-1" />
-                    Check-in OK
-                  </div>
-                ) : (
-                  <div className="absolute top-4 right-4 bg-red-500 text-white rounded-full px-3 py-1 text-xs font-bold flex items-center shadow-md">
-                    <XCircleIcon className="h-4 w-4 mr-1" />
-                    Aguardando
-                  </div>
-                )}
-                
-                <div className="flex-1">
-                  <h2 className="text-2xl font-bold text-gray-800 mb-1 leading-snug">
-                    {guest.nome}
-                  </h2>
-                  <p className="text-sm font-medium text-cyan-600 mb-4 border-b border-gray-100 pb-2">
-                    {guest.familia || "Família Não Identificada"}
-                  </p>
-                  <div className="mt-2 space-y-2 text-sm text-gray-600">
-                    <div className="flex items-center">
-                      <TableCellsIcon className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
-                      <span>
-                        Mesa:{" "}
-                        <span className="font-semibold text-gray-800">
-                          {guest.mesa || "N/A"}
-                        </span>
-                      </span>
-                    </div>
-                    <div className="flex items-center">
-                      <CalendarDaysIcon className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
-                      <span>
-                        Lado:{" "}
-                        <span className="font-semibold text-gray-800">
-                          {guest.lado || "N/A"}
-                        </span>
-                      </span>
-                    </div>
-                    <div className="flex items-center">
-                      <UsersIcon className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
-                      <span className="font-medium">
-                        {guest.acompanhantes && guest.acompanhantes !== "0"
-                          ? `+ 1 Acompanhante`
-                          : "Individual"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() =>
-                    navigate(`/protocolo/${guest.id}`, { state: guest })
-                  }
-                  className="mt-6 w-full py-3 bg-gradient-to-r from-cyan-500 to-teal-500 text-white font-semibold rounded-lg shadow-md transition-all duration-300 hover:opacity-90 transform hover:scale-[1.01] hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-teal-500/50"
-                >
-                  Verificar Convidado
-                </button>
-              </div>
+              <GuestCard 
+                key={guest.id} 
+                guest={guest} 
+                navigate={navigate} 
+              />
             ))}
           </div>
         )}
       </div>
 
-     
-      {/* Leitor QR em Tela Cheia (Interface Moderna) */}
+      {/* Leitor QR em Tela Cheia */}
       {openScanner && (
         <div className="fixed inset-0 z-50 flex flex-col bg-gray-900/95 backdrop-blur-md text-white p-6">
           <div className="flex justify-between items-center mb-6">
@@ -348,13 +371,11 @@ const ProtocolPage: React.FC = () => {
                 classNames={{
                   video: "w-full h-full object-cover",
                 }}
-                // Customização visual para o leitor (opcional, dependendo da lib)
                 styles={{
                     container: { width: '100%', height: '100%' },
                 }}
               />
               <div className="absolute inset-0 border-8 border-transparent pointer-events-none">
-                  {/* Linhas de canto para efeito visual moderno */}
                   <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-teal-400 rounded-tl-lg"></div>
                   <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-teal-400 rounded-tr-lg"></div>
                   <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-teal-400 rounded-bl-lg"></div>
@@ -367,6 +388,7 @@ const ProtocolPage: React.FC = () => {
           </div>
         </div>
       )}
+      
       {/* Barra de busca e câmera fixa no rodapé */}
       <div className="fixed bottom-0 left-0 right-0 bg-white/90 p-4 shadow-xl border-t border-gray-200 backdrop-blur-sm">
         <div className="max-w-6xl mx-auto flex items-center gap-4">

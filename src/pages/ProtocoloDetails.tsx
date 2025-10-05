@@ -1,6 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { 
+  CheckCircleIcon, 
+  XCircleIcon, 
+  ArrowLeftIcon, 
+  UsersIcon, 
+  TableCellsIcon, 
+  CalendarDaysIcon, 
+  UserGroupIcon, 
+  GiftIcon 
+} from '@heroicons/react/24/solid';
+import { motion, AnimatePresence } from 'framer-motion';
+import LoadingScreenDetalhes from '../components/protocolo/detalhesloading';
+import toast, { Toaster } from 'react-hot-toast'; // Importe sua biblioteca de toast
+
 
 const API = "https://script.google.com/macros/s/AKfycbxsMqSeierihKZmpr7FLYYzL_6oAP8hX2BivXiRzcjeA6_btqG8otxctsorJ8abqNvJ/exec";
 
@@ -12,10 +26,11 @@ const ProtocolDetailsPage: React.FC = () => {
   const stateGuest = location.state || null;
   const isDirectLink = !stateGuest;
 
-  const [useQueryMode, setUseQueryMode] = useState(isDirectLink);
   const [guest, setGuest] = useState<any>(stateGuest);
   const [hasAutoConfirmed, setHasAutoConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showAnimation, setShowAnimation] = useState(false);
+  const [showUndoModal, setShowUndoModal] = useState(false);
 
   const { data: guestFromQuery, refetch, isLoading } = useQuery({
     queryKey: ['guest', id],
@@ -23,14 +38,12 @@ const ProtocolDetailsPage: React.FC = () => {
       const res = await fetch(`${API}?action=getGuest&id=${id}`);
       return res.json();
     },
-    enabled: useQueryMode,
+    enabled: isDirectLink,
     refetchInterval: guest?.chegou ? false : 500,
   });
 
   useEffect(() => {
-    if (!guest && guestFromQuery) {
-      setGuest(guestFromQuery);
-    }
+    if (!guest && guestFromQuery) setGuest(guestFromQuery);
 
     if (
       isDirectLink &&
@@ -44,30 +57,51 @@ const ProtocolDetailsPage: React.FC = () => {
     }
   }, [guestFromQuery]);
 
-  const handleMarkArrival = async (guestId?: string) => {
+
+
+const handleMarkArrival = async (guestId?: string) => {
     const targetId = guestId || guest?.id;
     if (!targetId) return;
 
+    // 1. Inicia o Toast de carregamento e armazena sua ID
+    const toastId = toast.loading('Confirmando chegada. Por favor, aguarde...');
+    
     setLoading(true);
+
     try {
       await fetch(API, {
         method: 'POST',
-        body: JSON.stringify({
-          action: 'markArrival',
-          id: targetId,
-        }),
+        body: JSON.stringify({ action: 'markArrival', id: targetId }),
       });
-
+      
       const updated = await refetch();
+      
       if (updated?.data) {
         setGuest(updated.data);
+        setShowAnimation(true);
+        setTimeout(() => setShowAnimation(false), 2500);
+        
+        // 2. Substitui o Toast de carregamento por um Toast de sucesso
+        toast.success('Chegada confirmada com sucesso!', { id: toastId });
+      } else {
+         // Caso a API não retorne dados esperados, mas a chamada tenha sucesso
+         toast.error('Ocorreu um erro na atualização dos dados.', { id: toastId });
       }
-    } catch {
-      alert('Erro ao confirmar chegada.');
+    } catch (error) {
+      // 3. Substitui o Toast de carregamento por um Toast de erro em caso de falha
+      console.error(error);
+      toast.error('Erro ao confirmar chegada. Tente novamente.', { id: toastId });
+      
+      // Mantenha o alert ou use apenas o toast.error, dependendo da sua preferência
+      // alert('Erro ao confirmar chegada.'); 
     } finally {
       setLoading(false);
+      
+      // NOTA: Em muitas implementações de toast, o success/error já remove o loading,
+      // mas se não usarmos o ID do toast, ele pode persistir. 
+      // Usar 'toast.dismiss(toastId)' aqui seria redundante se 'toast.success' for usado.
     }
-  };
+};
 
   const handleUndoArrival = async () => {
     if (!guest?.id) return;
@@ -75,18 +109,12 @@ const ProtocolDetailsPage: React.FC = () => {
     try {
       await fetch(API, {
         method: 'POST',
-        body: JSON.stringify({
-          action: 'undoArrival',
-          id: guest.id,
-        }),
+        body: JSON.stringify({ action: 'undoArrival', id: guest.id }),
       });
-
       const updated = await refetch();
-      if (updated?.data) {
-        setGuest(updated.data);
-      }
-
+      if (updated?.data) setGuest(updated.data);
       setHasAutoConfirmed(false);
+      setShowUndoModal(false);
     } catch {
       alert('Erro ao reverter chegada.');
     } finally {
@@ -94,15 +122,17 @@ const ProtocolDetailsPage: React.FC = () => {
     }
   };
 
-  if (!guest && isLoading) {
-    return <p className="p-6 text-center">Carregando dados do convidado...</p>;
-  }
+  if (!guest && isLoading) return <LoadingScreenDetalhes />;
 
   if (!guest) {
     return (
       <div className="p-6 text-center">
-        <p>Convidado não encontrado.</p>
-        <button onClick={() => navigate(-1)} className="mt-4 bg-blue-600 text-white px-4 py-2 rounded">
+        <p className="text-lg text-red-600 font-semibold">Convidado não encontrado.</p>
+        <button
+          onClick={() => navigate(-1)}
+          className="mt-4 flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition"
+        >
+          <ArrowLeftIcon className="w-5 h-5" />
           Voltar
         </button>
       </div>
@@ -110,65 +140,185 @@ const ProtocolDetailsPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-xl mx-auto mt-10 bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700">
-      <div className="mb-6">
-        <h2 className="text-3xl font-bold text-center text-blue-700 dark:text-blue-400">
-          Confirmação de Chegada
-        </h2>
-        <p className="text-center text-gray-600 dark:text-gray-300">
-          Convidado: <strong>{guest.nome}</strong>
-        </p>
+    <div className="min-h-screen bg-white flex flex-col items-center justify-between p-0 sm:p-6">
+
+      {/* Conteúdo principal */}
+      <div className="w-full max-w-md bg-white dark:bg-gray-900 rounded-3xl sm:shadow-2xl sm:border border-gray-200 dark:border-gray-700 p-4 sm:p-8 mt-6 flex flex-col gap-6">
+
+        {/* Cabeçalho */}
+        <div className="text-center">
+          <h2 className="text-2xl sm:text-3xl font-serif font-bold text-pink-700 dark:text-pink-400">Protocolo de Chegada</h2>
+          <p className="text-gray-600 dark:text-gray-300 mt-2 text-lg sm:text-xl font-medium truncate">{guest.nome}</p>
+        </div>
+
+        {/* Status cards */}
+        <div className="grid grid-cols-2 gap-4 sm:gap-6">
+          <div className={`p-4 rounded-2xl shadow-md flex flex-col items-center justify-center gap-2 transition transform hover:scale-105 ${guest.confirmou === 'sim' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+            <CalendarDaysIcon className="w-8 h-8 sm:w-10 sm:h-10" />
+            <p className="text-sm sm:text-base font-semibold">Presença</p>
+            <p className="mt-1 text-lg sm:text-xl font-bold">{guest.confirmou === 'sim' ? 'Confirmada' : 'Não Confirmada'}</p>
+          </div>
+
+          <div className={`p-4 rounded-2xl shadow-md flex flex-col items-center justify-center gap-2 transition transform hover:scale-105 ${guest.chegou ? 'bg-green-50 text-green-800' : 'bg-yellow-50 text-yellow-800'}`}>
+            <UserGroupIcon className="w-8 h-8 sm:w-10 sm:h-10" />
+            <p className="text-sm sm:text-base font-semibold">Chegada</p>
+            <p className="mt-1 text-lg sm:text-xl font-bold">{guest.chegou ? 'Presente' : 'Pendente'}</p>
+          </div>
+        </div>
+
+        {/* Informações detalhadas */}
+        <div className="space-y-3">
+          <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
+            <span className="text-gray-500 flex items-center gap-1">
+              <GiftIcon className="w-4 h-4" /> Família
+            </span>
+            <span className="font-semibold truncate max-w-[60%]">{guest.familia}</span>
+          </div>
+          <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
+            <span className="text-gray-500 flex items-center gap-1">
+              <UsersIcon className="w-4 h-4" /> Lado
+            </span>
+            <span className="font-semibold truncate max-w-[60%]">{guest.lado}</span>
+          </div>
+          <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
+            <span className="text-gray-500 flex items-center gap-1">
+              <UsersIcon className="w-4 h-4" /> Acompanhantes
+            </span>
+            <span className="font-semibold truncate max-w-[60%]">{guest.acompanhantes || 'Nenhum'}</span>
+          </div>
+
+          {/* Mesa destacada */}
+          {guest.confirmou === 'sim' && guest.chegou && (
+            <div className="flex justify-between py-3 px-4 border border-pink-400 bg-pink-50 dark:bg-pink-900 rounded-xl shadow-md items-center">
+              <span className="text-pink-600 flex items-center gap-2 font-semibold">
+                <TableCellsIcon className="w-5 h-5" /> Mesa
+              </span>
+              <span className="text-pink-700 font-bold text-lg sm:text-xl truncate max-w-[60%]">{guest.mesa || '—'}</span>
+            </div>
+          )}
+
+          {guest.confirmou !== 'sim' && (
+            <div className="text-center text-gray-500 text-sm mt-2 italic">
+              Confirme sua presença para visualizar a mesa.
+            </div>
+          )}
+        </div>
+
+        {/* Botões */}
+        <div className="flex flex-col items-center gap-3 mb-8 md:mb-12">
+          {!guest.chegou ? (
+            <button
+              onClick={() => handleMarkArrival()}
+              disabled={loading || isLoading}
+              className="w-full flex items-center justify-center gap-2 bg-pink-600 text-white py-3 rounded-xl shadow-md hover:bg-pink-700 disabled:opacity-50 transition font-semibold"
+            >
+              {loading ? 'Confirmando...' : 'Confirmar Chegada'}
+              <CheckCircleIcon className="w-5 h-5" />
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowUndoModal(true)}
+              disabled={loading || isLoading}
+              className="w-full flex items-center justify-center gap-2 bg-red-600 text-white py-3 rounded-xl shadow-md hover:bg-red-700 disabled:opacity-50 transition font-semibold"
+            >
+              Desfazer Chegada
+              <XCircleIcon className="w-5 h-5" />
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="space-y-2 text-sm">
-        <p><strong>ID:</strong> <span className="font-mono">{guest.id}</span></p>
-        <p><strong>Família:</strong> {guest.familia}</p>
-        <p><strong>Lado:</strong> {guest.lado}</p>
-        <p><strong>Acompanhantes:</strong> {guest.acompanhantes || 'Nenhum'}</p>
-        <p>
-          <strong>Confirmou presença:</strong>{' '}
-          <span className={guest.confirmou === 'sim' ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
-            {guest.confirmou === 'sim' ? 'Sim' : 'Não'}
-          </span>
-        </p>
-        <p>
-          <strong>Chegou:</strong>{' '}
-          <span className={guest.chegou ? 'text-green-600 font-medium' : 'text-yellow-600 font-medium'}>
-            {guest.chegou ? 'Sim' : 'Não'}
-          </span>
-        </p>
-        {guest.chegou && (
-          <p>
-            <strong>Mesa:</strong>{' '}
-            <span className="text-blue-600 font-semibold">{guest.mesa || '—'}</span>
-          </p>
+      {/* Modal de confirmação de desfazer chegada */}
+      <AnimatePresence>
+        {showUndoModal && (
+          <motion.div 
+            className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowUndoModal(false)}
+          >
+            <motion.div 
+              className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-lg max-w-sm w-full text-center"
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">
+                Tem certeza que deseja desfazer a chegada de {guest.nome}?
+              </p>
+              <div className="flex gap-4 justify-center">
+                <button 
+                  onClick={handleUndoArrival}
+                  disabled={loading}
+                  className={`px-4 py-2 rounded-xl font-semibold transition ${
+                    loading 
+                      ? 'bg-red-400 cursor-not-allowed text-white' 
+                      : 'bg-red-600 hover:bg-red-700 text-white'
+                  }`}
+                >
+                  {loading ? 'Processando...' : 'Sim, desfazer'}
+                </button>
+                <button 
+                  onClick={() => setShowUndoModal(false)}
+                  disabled={loading}
+                  className={`px-4 py-2 rounded-xl font-semibold transition ${
+                    loading 
+                      ? 'bg-gray-300 cursor-not-allowed text-gray-500' 
+                      : 'bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-400 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
+      </AnimatePresence>
+
+      {/* Botão fixo de voltar */}
+      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 w-full max-w-md px-4 sm:px-6">
+        <button
+          onClick={() => navigate(-1)}
+          className="w-full flex items-center justify-center gap-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white py-3 rounded-xl shadow hover:bg-gray-300 dark:hover:bg-gray-600 transition font-semibold"
+        >
+          <ArrowLeftIcon className="w-5 h-5" />
+          Voltar
+        </button>
       </div>
 
-      {!guest.chegou ? (
-        <button
-          onClick={() => handleMarkArrival()}
-          disabled={loading || isLoading}
-          className="mt-6 w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 disabled:opacity-50"
-        >
-          {loading ? 'Confirmando chegada...' : 'Confirmar Chegada'}
-        </button>
-      ) : (
-        <button
-          onClick={handleUndoArrival}
-          disabled={loading || isLoading}
-          className="mt-6 w-full bg-red-600 text-white py-2 rounded hover:bg-red-700 disabled:opacity-50"
-        >
-          {loading ? 'Revertendo...' : 'Desfazer Chegada'}
-        </button>
-      )}
-
-      <button
-        onClick={() => navigate(-1)}
-        className="mt-4 w-full bg-gray-600 text-white py-2 rounded"
-      >
-        Voltar
-      </button>
+      {/* Animação de confirmação */}
+      <AnimatePresence>
+        {showAnimation && (
+          <motion.div
+            className="fixed inset-0 bg-pink-100 bg-opacity-40 flex items-center justify-center z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="relative flex flex-col items-center"
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0 }}
+            >
+              <CheckCircleIcon className="w-24 h-24 text-pink-600 animate-pulse mb-4" />
+              <p className="text-pink-700 font-bold text-xl animate-pulse">Chegada Confirmada 🎉</p>
+              {[...Array(15)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  className="absolute w-2 h-2 bg-yellow-400 rounded-full"
+                  initial={{ y: 0, x: 0, opacity: 1 }}
+                  animate={{ y: 120 + Math.random() * 100, x: -60 + Math.random() * 120, opacity: 0 }}
+                  transition={{ duration: 1 + Math.random(), ease: 'easeOut' }}
+                />
+              ))}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
     </div>
   );
 };
