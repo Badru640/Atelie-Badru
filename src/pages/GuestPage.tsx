@@ -396,7 +396,7 @@ export const GuestPage: React.FC = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="fixed inset-0 bg-black bg-opacity-70 flex flex-col items-center justify-center z-10 p-4"
+              className="fixed inset-0 bg-red-300 bg-opacity-70 flex flex-col items-center justify-center z-10 p-4"
               onClick={() => setShowTableAnimation(false)}
             >
               <motion.div
@@ -405,15 +405,15 @@ export const GuestPage: React.FC = () => {
                 animate={{ y: "0%", opacity: 1 }}
                 exit={{ y: "100%", opacity: 0 }}
                 transition={{ type: "spring", stiffness: 200, damping: 25, duration: 0.5 }}
-                className="bg-gradient-to-br from-rose-500 to-rose-700 text-white rounded-2xl shadow-2xl p-8 text-center border-4 border-white transform-gpu max-w-sm w-full mx-auto"
+                className="bg-gradient-to-br from-rose-500 to-rose-700 text-white rounded-2xl shadow-2xl p-8 text-center border-4 border-white transform-gpu max-w-md w-full mx-auto"
                 onClick={(e) => e.stopPropagation()}
               >
-                <p className="text-3xl sm:text-4xl font-['Playfair_Display'] mb-4 animate-pulse">🎉 Sua Mesa é 🎉</p>
+                <p className="text-2xl sm:text-3xl font-['Playfair_Display'] mb-4 animate-pulse">🎉 Sua Mesa é 🎉</p>
                 <motion.p
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ delay: 0.2, duration: 0.3 }}
-                  className="text-4xl sm:text-7xl font-bold font-['Playfair_Display'] leading-none drop-shadow-lg"
+                  className="text-3xl sm:text-5xl font-bold font-['Playfair_Display'] leading-none drop-shadow-lg"
                 >
                   {guest.mesa}
                 </motion.p>
