@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { 
@@ -13,7 +13,18 @@ import {
 } from '@heroicons/react/24/solid';
 import { motion, AnimatePresence } from 'framer-motion';
 import LoadingScreenDetalhes from '../components/protocolo/detalhesloading';
-import toast, { Toaster } from 'react-hot-toast'; // Importe sua biblioteca de toast
+import toast from 'react-hot-toast'; 
+
+interface Guest {
+  id: string;
+  nome: string;
+  familia: string;
+  mesa: string;
+  lado: string;
+  confirmou: string; 
+  chegou: boolean;
+  acompanhantes: string;
+}
 
 
 const API = "https://script.google.com/macros/s/AKfycbxsMqSeierihKZmpr7FLYYzL_6oAP8hX2BivXiRzcjeA6_btqG8otxctsorJ8abqNvJ/exec";
@@ -23,10 +34,14 @@ const ProtocolDetailsPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const stateGuest = location.state || null;
-  const isDirectLink = !stateGuest;
+  // 1. Recebe o objeto state completo e extrai as flags
+  const stateData = location.state as { guestData: Guest, isScanned?: boolean } | null;
+  const stateGuest = stateData?.guestData || null; 
+  const cameFromScanner = stateData?.isScanned === true; 
+  
+  const isDirectLink = !stateGuest; 
 
-  const [guest, setGuest] = useState<any>(stateGuest);
+  const [guest, setGuest] = useState<Guest | null>(stateGuest);
   const [hasAutoConfirmed, setHasAutoConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showAnimation, setShowAnimation] = useState(false);
@@ -59,13 +74,11 @@ const ProtocolDetailsPage: React.FC = () => {
 
 
 
-const handleMarkArrival = async (guestId?: string) => {
+  const handleMarkArrival = useCallback(async (guestId?: string) => {
     const targetId = guestId || guest?.id;
     if (!targetId) return;
 
-    // 1. Inicia o Toast de carregamento e armazena sua ID
     const toastId = toast.loading('Confirmando chegada. Por favor, aguarde...');
-    
     setLoading(true);
 
     try {
@@ -80,28 +93,45 @@ const handleMarkArrival = async (guestId?: string) => {
         setGuest(updated.data);
         setShowAnimation(true);
         setTimeout(() => setShowAnimation(false), 2500);
-        
-        // 2. Substitui o Toast de carregamento por um Toast de sucesso
         toast.success('Chegada confirmada com sucesso!', { id: toastId });
       } else {
-         // Caso a API não retorne dados esperados, mas a chamada tenha sucesso
          toast.error('Ocorreu um erro na atualização dos dados.', { id: toastId });
       }
     } catch (error) {
-      // 3. Substitui o Toast de carregamento por um Toast de erro em caso de falha
       console.error(error);
       toast.error('Erro ao confirmar chegada. Tente novamente.', { id: toastId });
-      
-      // Mantenha o alert ou use apenas o toast.error, dependendo da sua preferência
-      // alert('Erro ao confirmar chegada.'); 
     } finally {
       setLoading(false);
-      
-      // NOTA: Em muitas implementações de toast, o success/error já remove o loading,
-      // mas se não usarmos o ID do toast, ele pode persistir. 
-      // Usar 'toast.dismiss(toastId)' aqui seria redundante se 'toast.success' for usado.
     }
-};
+}, [guest?.id, refetch]); 
+
+// 3. Lógica Principal de Auto-Confirmação
+useEffect(() => {
+  // 3.1. Se estivermos em um link direto e os dados da query chegarem, atualiza o estado local
+  if (!guest && guestFromQuery) {
+      setGuest(guestFromQuery);
+  }
+
+  // 3.2. Usa o convidado que estiver carregado (seja do state ou da query)
+  const currentGuest = guest || guestFromQuery;
+  
+  // 3.3. Condição para Auto-Confirmação: Deve vir do scanner E preencher as regras
+  if (
+    cameFromScanner && // <-- CHAVE: SÓ RODA SE VIER DO SCANNER
+    currentGuest &&
+    currentGuest.confirmou === 'sim' &&
+    currentGuest.chegou === false &&
+    !hasAutoConfirmed
+  ) {
+    setHasAutoConfirmed(true);
+    
+    // Adiciona um pequeno delay para melhorar a experiência do usuário, 
+    // garantindo que a tela carregue antes de iniciar o loading da API.
+    setTimeout(() => {
+      handleMarkArrival(currentGuest.id);
+    }, 100); 
+  }
+}, [cameFromScanner, guest, guestFromQuery, hasAutoConfirmed, handleMarkArrival]); 
 
   const handleUndoArrival = async () => {
     if (!guest?.id) return;

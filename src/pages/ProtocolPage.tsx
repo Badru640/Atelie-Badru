@@ -86,8 +86,8 @@ interface GuestCardProps {
 
 const GuestCard: React.FC<GuestCardProps> = React.memo(({ guest, navigate }) => {
   const handleViewGuest = () => {
-    // Navega para a página de detalhes do convidado
-    navigate(`/protocolo/${guest.id}`, { state: guest });
+    // A navegação do botão SÓ ENVIA os dados, sem a flag de scanner
+    navigate(`/protocolo/${guest.id}`, { state: { guestData: guest } }); // Ajustado para passar no mesmo formato
   };
 
   const cardClasses = `
@@ -239,37 +239,34 @@ const ProtocolPage: React.FC = () => {
 
  // No componente ProtocolPage, onde handleScan está definida:
 
-const handleScan = (result: string) => {
+ const handleScan = (result: string) => {
   if (result) {
-    let guestId: string = result;
+      let guestId: string = result;
 
-    try {
-      // 1. Tenta extrair o ID de uma URL
-      const url = new URL(result);
-      const parts = url.pathname.split("/");
-      guestId = parts[parts.length - 1];
-    } catch (e) {
-      // 2. Se falhar, assume que 'result' é o ID
-      guestId = result;
-    }
+      try {
+          const url = new URL(result);
+          const parts = url.pathname.split("/");
+          guestId = parts[parts.length - 1];
+      } catch (e) {
+          guestId = result;
+      }
 
-    // --- MUDANÇA CRUCIAL AQUI ---
-    // 3. Encontra o convidado completo na lista de dados já carregados
-    const foundGuest = guests.find(g => g.id === guestId);
+      const foundGuest = guests.find(g => g.id === guestId);
 
-    if (foundGuest) {
-      // 4. Se o convidado for encontrado, navega enviando o objeto completo no state
-      navigate(`/protocolo/${guestId}`, { state: { guestData: foundGuest } });
-    } else {
-      // 5. Se não encontrar (mas tem o ID), navega apenas com o ID 
-      //    para que a próxima página tente carregar os dados (fallback)
-      navigate(`/protocolo/${guestId}`);
-      // Opcional: Adicionar um alerta ou log de erro
-      console.warn(`Convidado com ID ${guestId} não encontrado localmente.`);
-    }
+      if (foundGuest) {
+          // ✅ MUDANÇA AQUI: Adiciona a flag isScanned: true no state
+          navigate(`/protocolo/${guestId}`, { 
+              state: { 
+                  guestData: foundGuest,
+                  isScanned: true // <-- Nova flag para indicar que veio do scanner
+              } 
+          });
+      } else {
+          // Fallback (mantém sem a flag se não encontrar o objeto)
+          navigate(`/protocolo/${guestId}`);
+      }
 
-    // 6. Fecha o scanner
-    setOpenScanner(false);
+      setOpenScanner(false);
   }
 };
   const handleClearSearch = () => {
