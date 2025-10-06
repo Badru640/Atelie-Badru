@@ -306,7 +306,7 @@ const ProtocolPage: React.FC = () => {
       {/* HEADER EM TELA CHEIA */}
       <header className="relative w-full h-60 md:h-72 lg:h-80 shadow-xl overflow-hidden">
         <img
-          src="https://lets.events/blog/wp-content/uploads/2018/04/Seguran-a-evento.jpg"
+          src="/img/couple/PHOTO-2025-07-10-00-09-35.jpg"
           alt="Segurança e Recepção de Eventos"
           className="absolute inset-0 w-full h-full object-cover object-center scale-105 transition-transform duration-500"
         />
