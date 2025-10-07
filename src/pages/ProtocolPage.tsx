@@ -157,7 +157,10 @@ const GuestCard: React.FC<GuestCardProps> = React.memo(({ guest, navigate }) => 
 
       {/* Mantido o botão como fallback/claro para UX, mas o clique no div é o principal */}
       <button
-        onClick={handleViewGuest}
+        onClick={(e) => {
+          e.stopPropagation();
+          handleViewGuest();
+        }}
         className="mt-6 w-full py-3 bg-gradient-to-r from-cyan-500 to-teal-500 text-white font-semibold rounded-lg shadow-md transition-all duration-300 hover:opacity-90 transform hover:scale-[1.01] hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-teal-500/50"
       >
         Verificar Convidado
@@ -306,7 +309,7 @@ const ProtocolPage: React.FC = () => {
       {/* HEADER EM TELA CHEIA */}
       <header className="relative w-full h-60 md:h-72 lg:h-80 shadow-xl overflow-hidden">
         <img
-          src="/img/couple/PHOTO-2025-07-10-00-09-35.jpg"
+          src="https://cdn.alboompro.com/5e662dbcc527ae00015f2530_625d7e819f0b810001a20596/large/casamento-camila-e-erica-1-1-min.jpg?v=1"
           alt="Segurança e Recepção de Eventos"
           className="absolute inset-0 w-full h-full object-cover object-center scale-105 transition-transform duration-500"
         />
@@ -325,7 +328,7 @@ const ProtocolPage: React.FC = () => {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 -mt-16 relative ">
 
         {/* Botões de Filtro */}
-        <div className="flex flex-wrap justify-center gap-4 p-3 bg-white/65 backdrop-blur-sm rounded-3xl 
+        <div className="flex flex-wrap justify-center gap-4 p-3 bg-white/45 backdrop-blur-sm rounded-3xl 
                       shadow-2xl ring-2 ring-gray-300 transform transition-all duration-300 hover:shadow-3xl">
           {filterOptions.map((option) => (
             <FilterButton

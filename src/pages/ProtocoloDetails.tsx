@@ -1,9 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { 
-  useQuery, 
-  UseQueryResult, // Importado para tipar o retorno do useQuery e do refetch
-} from '@tanstack/react-query'; 
+import { useQuery } from '@tanstack/react-query';
 import {
   CheckCircleIcon,
   XCircleIcon,
@@ -18,26 +15,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import LoadingScreenDetalhes from '../components/protocolo/detalhesloading';
 import toast from 'react-hot-toast';
 
-// --- Interface para o Convidado (Guest) ---
 interface Guest {
   id: string;
   nome: string;
   familia: string;
   mesa: string;
   lado: string;
-  confirmou: 'sim' | 'não';
+  confirmou: string;
   chegou: boolean;
   acompanhantes: string;
 }
 
-// --- Definição da URL da API ---
-const API = "https://script.google.com/macros/s/AKfycbxsMqSeierihKZmpr7FLYYL_6oAP8hX2BivXiRzcjeA6_btqG8otcctsorJ8abqNvJ/exec";
-
-// --- Tipagem para os dados passados via useLocation state ---
-interface LocationState {
-    guestData: Guest;
-    isScanned?: boolean;
-}
+const API = "https://script.google.com/macros/s/AKfycbxsMqSeierihKZmpr7FLYYzL_6oAP8hX2BivXiRzcjeA6_btqG8otxctsorJ8abqNvJ/exec";
 
 // --- Componente de Item de Detalhe (Compacto) ---
 interface DetailItemProps {
@@ -52,69 +41,55 @@ const DetailItem: React.FC<DetailItemProps> = ({ icon: Icon, title, value }) => 
       <Icon className="w-4 h-4 mr-2 text-pink-500" /> 
       <span className="text-sm font-medium">{title}</span>
     </div>
-    <span className="text-sm font-semibold text-gray-800 break-words text-right">{value?.toString() || 'N/A'}</span>
+    <span className="text-sm font-semibold text-gray-800 break-words text-right">{value || 'N/A'}</span>
   </div>
 );
 
 
 const ProtocolDetailsPage: React.FC = () => {
-  // --- Hooks de Roteamento ---
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  
   const location = useLocation();
-  const stateData = location.state as LocationState | null;
-  const stateGuest: Guest | null = stateData?.guestData || null;
-  const cameFromScanner: boolean = stateData?.isScanned === true;
-  const isDirectLink: boolean = !stateGuest; 
+  const navigate = useNavigate();
 
-  // --- Estados Locais com Tipagem Explícita ---
+  const stateData = location.state as { guestData: Guest, isScanned?: boolean } | null;
+  const stateGuest = stateData?.guestData || null;
+  const cameFromScanner = stateData?.isScanned === true;
+  const isDirectLink = !stateGuest;
+
   const [guest, setGuest] = useState<Guest | null>(stateGuest);
-  const [hasAutoConfirmed, setHasAutoConfirmed] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [showAnimation, setShowAnimation] = useState<boolean>(false);
-  const [showUndoModal, setShowUndoModal] = useState<boolean>(false);
+  const [hasAutoConfirmed, setHasAutoConfirmed] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [showAnimation, setShowAnimation] = useState(false);
+  const [showUndoModal, setShowUndoModal] = useState(false);
 
-  // --- useQuery para buscar dados (Consolidado) ---
-  const { 
-    data: guestFromQuery, 
-    error, 
-    isError,
-    refetch, 
-    isLoading 
-  } = useQuery<Guest, Error>({
+  const { data: guestFromQuery, refetch, isLoading, error } = useQuery<Guest, Error>({
     queryKey: ['guest', id],
-    queryFn: async (): Promise<Guest> => {
-      if (!id) throw new Error('ID do convidado não fornecido.');
+    queryFn: async () => {
       const res = await fetch(`${API}?action=getGuest&id=${id}`);
       if (!res.ok) throw new Error('Falha ao buscar convidado');
-      return res.json();
+      return res.json() as Promise<Guest>;
     },
-    // Habilita a busca APENAS se for um link direto (não veio com dados no state) E se o ID existir.
-    enabled: isDirectLink && !!id, 
-    // Refetch para atualizar se o convidado ainda não chegou (se veio por link direto)
-    refetchInterval: stateGuest?.chegou ? false : 500, 
-    retry: false,
+    enabled: isDirectLink,
+    refetchInterval: guest?.chegou ? false : 500,
   });
   
-  // Exibir toast se houver erro
   useEffect(() => {
-    if (isError && error) {
-      toast.error(`Erro ao carregar dados do convidado: ${error.message}`);
+    if (error) {
+      toast.error('Erro ao carregar dados do convidado.');
     }
-  }, [isError, error]);
+  }, [error]);
   
 
-  // --- Função para Marcar Chegada (Tipagem useCallback) ---
-  const handleMarkArrival = useCallback(async (guestId?: string): Promise<void> => {
-    const targetId: string | undefined = guestId || guest?.id;
+  // Funções handleMarkArrival e handleUndoArrival (MANTIDAS)
+  const handleMarkArrival = useCallback(async (guestId?: string) => {
+    const targetId = guestId || guest?.id;
     if (!targetId) return;
 
-    const toastId: string = toast.loading('Confirmando chegada. Por favor, aguarde...');
+    const toastId = toast.loading('Confirmando chegada. Por favor, aguarde...');
     setLoading(true);
 
     try {
-      const response: Response = await fetch(API, {
+      const response = await fetch(API, {
         method: 'POST',
         body: JSON.stringify({ action: 'markArrival', id: targetId }),
       });
@@ -123,8 +98,7 @@ const ProtocolDetailsPage: React.FC = () => {
         throw new Error('Erro na requisição da API.');
       }
 
-      // Tipagem correta: refetch() retorna uma Promise<UseQueryResult>
-      const updated: UseQueryResult<Guest, Error> = await refetch(); 
+      const updated = await refetch();
 
       if (updated?.data) {
         setGuest(updated.data);
@@ -140,23 +114,21 @@ const ProtocolDetailsPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [guest?.id, refetch]); // Adicionado refetch às dependências
+  }, [guest?.id, refetch]);
 
 
-  // --- Função para Desfazer Chegada (Tipagem async) ---
-  const handleUndoArrival = async (): Promise<void> => {
+  const handleUndoArrival = async () => {
     if (!guest?.id) return;
     setLoading(true);
-    const toastId: string = toast.loading('Revertendo chegada...');
+    const toastId = toast.loading('Revertendo chegada...');
     try {
-      const response: Response = await fetch(API, {
+      const response = await fetch(API, {
         method: 'POST',
         body: JSON.stringify({ action: 'undoArrival', id: guest.id }),
       });
       if (!response.ok) throw new Error('Erro na requisição de desfazer.');
 
-      const updated: UseQueryResult<Guest, Error> = await refetch(); 
-
+      const updated = await refetch();
       if (updated?.data) {
         setGuest(updated.data);
         setHasAutoConfirmed(false);
@@ -173,14 +145,10 @@ const ProtocolDetailsPage: React.FC = () => {
     }
   };
   
-  // --- Efeito: Sincroniza Query Data com State Local e Auto-Confirmação (Link Direto) ---
+  // Efeitos (MANTIDOS)
   useEffect(() => {
-    // 1. Sincroniza o estado local 'guest' com os dados da query se o link for direto
-    if (isDirectLink && guestFromQuery && !guest) {
-        setGuest(guestFromQuery);
-    }
+    if (!guest && guestFromQuery) setGuest(guestFromQuery);
 
-    // 2. Lógica de Auto-Confirmação para Link Direto
     if (
       isDirectLink &&
       guestFromQuery &&
@@ -191,12 +159,12 @@ const ProtocolDetailsPage: React.FC = () => {
       setHasAutoConfirmed(true);
       handleMarkArrival(guestFromQuery.id);
     }
-  }, [guestFromQuery, isDirectLink, hasAutoConfirmed, handleMarkArrival, guest]);
+  }, [guestFromQuery, isDirectLink, hasAutoConfirmed, handleMarkArrival]);
 
-  // --- Efeito: Lógica de Auto-Confirmação para Scanner (Veio do state) ---
   useEffect(() => {
-    const currentGuest: Guest | null = guest || guestFromQuery || null;
+    if (!guest && guestFromQuery) setGuest(guestFromQuery);
 
+    const currentGuest = guest || guestFromQuery;
     if (
       cameFromScanner &&
       currentGuest &&
@@ -207,17 +175,15 @@ const ProtocolDetailsPage: React.FC = () => {
       setHasAutoConfirmed(true);
       setTimeout(() => handleMarkArrival(currentGuest.id), 100);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cameFromScanner, hasAutoConfirmed, handleMarkArrival]); // Removido 'guest' e 'guestFromQuery' para evitar loop desnecessário
-
-  // --- Renderização Condicional ---
+  }, [cameFromScanner, guest, guestFromQuery, hasAutoConfirmed, handleMarkArrival]);
 
   if (!guest && isLoading) return <LoadingScreenDetalhes />;
 
   if (!guest) {
+    // Tela de Erro
     return (
       <div className="p-6 text-center h-screen flex flex-col justify-center items-center bg-gray-50">
-        <p className="text-xl text-red-600 font-semibold">Convidado não encontrado! 😥</p>
+        <p className="text-xl text-red-600 font-semibold">Convidado não encontrado!</p>
         <p className="text-gray-500 mt-2">Verifique o link ou o código QR.</p>
         <button
           onClick={() => navigate(-1)}
@@ -230,10 +196,9 @@ const ProtocolDetailsPage: React.FC = () => {
     );
   }
 
-  const arrivalStatus: boolean = guest.chegou;
-  const confirmationStatus: boolean = guest.confirmou === 'sim';
+  const arrivalStatus = guest.chegou;
+  const confirmationStatus = guest.confirmou === 'sim';
 
-  // --- Renderização do Layout ---
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center pb-28">
 
@@ -295,7 +260,7 @@ const ProtocolDetailsPage: React.FC = () => {
           />
           <DetailItem
             icon={UsersIcon}
-            title="Acompanhantes"
+            title="Acompanhante"
             value={guest.acompanhantes || 'Nenhum'}
           />
           <DetailItem
@@ -305,12 +270,12 @@ const ProtocolDetailsPage: React.FC = () => {
           />
           <DetailItem
             icon={UsersIcon}
-            title="Lado do Evento"
+            title="Lado"
             value={guest.lado}
           />
           <DetailItem
             icon={CheckCircleIcon}
-            title="ID do Protocolo"
+            title="ID do Convidado"
             value={guest.id}
           />
         </div>
@@ -319,20 +284,20 @@ const ProtocolDetailsPage: React.FC = () => {
       {/* --- Espaço para imagem em telas maiores --- */}
       <div className="flex-grow w-full max-w-md mt-6 px-4 block"> 
         <div 
-          className="h-48 bg-cover bg-center rounded-xl opacit" 
-          style={{ backgroundImage: 'url("https://amazingmoon.pt/wp-content/uploads/2021/11/Design-sem-nome-1024x576.jpg")' }}
+          className="h-56 bg-cover bg-center rounded-xl opacit" 
+          style={{ backgroundImage: 'url("/img/couple/PHOTO-2025-07-10-00-09-35.jpg")' }}
         >
         </div>
       </div>
 
       {/* --- Barra de Ação Fixa (Super Compactada) --- */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 shadow-2xl p-2.5">
-        <div className="max-w-md mx-auto flex flex-col gap-2">
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/80 border-t border-gray-200 shadow-2xl p-2.5">
+        <div className="max-w-md mx-auto flex flex-col gap-3">
           {!arrivalStatus ? (
             <button
               onClick={() => handleMarkArrival()}
               disabled={loading || isLoading}
-              className="w-full flex items-center justify-center gap-2 bg-pink-600 text-white py-2 rounded-full shadow-lg hover:bg-pink-700 disabled:opacity-50 transition font-bold text-sm"
+              className="w-full flex items-center justify-center gap-2 bg-pink-600 text-white py-3 rounded-2xl shadow-lg hover:bg-pink-700 disabled:opacity-50 transition font-bold text-sm"
             >
               {loading ? 'Confirmando...' : 'CONFIRMAR CHEGADA'}
               <CheckCircleIcon className="w-4 h-4" />
@@ -341,7 +306,7 @@ const ProtocolDetailsPage: React.FC = () => {
             <button
               onClick={() => setShowUndoModal(true)}
               disabled={loading || isLoading}
-              className="w-full flex items-center justify-center gap-2 bg-red-600 text-white py-2 rounded-full shadow-lg hover:bg-red-700 disabled:opacity-50 transition font-bold text-sm"
+              className="w-full flex items-center justify-center gap-2 bg-red-600 text-white py-3 rounded-2xl shadow-lg hover:bg-red-700 disabled:opacity-50 transition font-bold text-sm"
             >
               DESFAZER CHEGADA
               <XCircleIcon className="w-4 h-4" />
@@ -350,7 +315,7 @@ const ProtocolDetailsPage: React.FC = () => {
 
           <button
             onClick={() => navigate(-1)}
-            className="w-full flex items-center justify-center gap-2 bg-gray-100 text-gray-700 py-2 rounded-full shadow hover:bg-gray-200 transition font-semibold text-sm"
+            className="w-full flex items-center justify-center gap-2 bg-gray-200 text-gray-700 py-2 rounded-full shadow hover:bg-gray-200 transition font-semibold text-sm"
           >
             <ArrowLeftIcon className="w-4 h-4" />
             Voltar
