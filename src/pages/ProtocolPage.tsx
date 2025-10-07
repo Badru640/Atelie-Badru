@@ -411,7 +411,7 @@ const ProtocolPage: React.FC = () => {
       )}
       
       {/* Barra de busca e câmera fixa no rodapé */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/80 p-4 shadow-xl border-t border-gray-200 backdrop-blur-sm">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/80 p-4 shadow-xl border-t border-gray-200">
         <div className="max-w-6xl mx-auto flex items-center gap-4">
           <div className="relative flex-1">
             <span className="absolute inset-y-0 left-3 flex items-center text-gray-400">

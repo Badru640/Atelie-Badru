@@ -306,7 +306,7 @@ const ProtocolDetailsPage: React.FC = () => {
             <button
               onClick={() => setShowUndoModal(true)}
               disabled={loading || isLoading}
-              className="w-full flex items-center justify-center gap-2 bg-red-600 text-white py-3 rounded-2xl shadow-lg hover:bg-red-700 disabled:opacity-50 transition font-bold text-sm"
+              className="w-full  hidden items-center justify-center gap-2 bg-red-600 text-white py-3 rounded-2xl shadow-lg hover:bg-red-700 disabled:opacity-50 transition font-bold text-sm"
             >
               DESFAZER CHEGADA
               <XCircleIcon className="w-4 h-4" />
@@ -315,7 +315,7 @@ const ProtocolDetailsPage: React.FC = () => {
 
           <button
             onClick={() => navigate(-1)}
-            className="w-full flex items-center justify-center gap-2 bg-gray-200 text-gray-700 py-2 rounded-full shadow hover:bg-gray-200 transition font-semibold text-sm"
+            className="w-full flex items-center justify-center gap-2 bg-gray-200 text-gray-700 py-3 rounded-full shadow hover:bg-gray-200 transition font-semibold text-sm"
           >
             <ArrowLeftIcon className="w-4 h-4" />
             Voltar
