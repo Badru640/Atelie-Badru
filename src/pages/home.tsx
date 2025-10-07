@@ -6,30 +6,31 @@ const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const [role, setRole] = useState<'admin' | 'protocolo' | null>(null);
   const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Mensagem de erro se a função não for selecionada
+    setError(null); // Reseta erros toda submissão
+
     if (!role) {
-      alert('Por favor, selecione seu tipo de acesso (Administração ou Protocolo) antes de continuar.');
-      return; // Impede a continuação do login
+      setError('Por favor, selecione seu tipo de acesso (Administração ou Protocolo).');
+      return;
     }
 
-    // Mensagens de erro específicas para cada função
     if (role === 'admin') {
       if (password === 'Htcm0604') {
         login('hirondina@gmail.com');
         navigate('/admin');
       } else {
-        alert('Senha incorreta para Administrador. Por favor, tente novamente.');
+        setError('Senha incorreta para Administrador. Por favor, tente novamente.');
       }
     } else if (role === 'protocolo') {
       if (password === 'protocolo123') {
         login('protocolo@evento.com');
         navigate('/protocolo');
       } else {
-        alert('Senha incorreta para Protocolo. Por favor, tente novamente.');
+        setError('Senha incorreta para Protocolo. Por favor, tente novamente.');
       }
     }
   };
@@ -51,7 +52,7 @@ const HomePage: React.FC = () => {
 
       {/* Lado do login */}
       <div className="md:w-1/2 w-full h-2/3 md:h-full bg-white flex items-center justify-center px-6 py-10">
-        <form onSubmit={handleLogin} className="w-full max-w-sm space-y-5">
+        <form onSubmit={handleLogin} className="w-full max-w-sm space-y-5" noValidate>
           <h2 className="text-2xl font-semibold text-center text-gray-700">Área dos Organizadores</h2>
 
           <div className="space-y-2">
@@ -65,6 +66,8 @@ const HomePage: React.FC = () => {
                     ? 'bg-rose-500 text-white border-rose-500'
                     : 'bg-white border-gray-300 text-gray-700 hover:bg-rose-100'}
                 `}
+                aria-pressed={role === 'admin'}
+                aria-label="Selecionar acesso Administração"
               >
                 Administração
               </button>
@@ -76,6 +79,8 @@ const HomePage: React.FC = () => {
                     ? 'bg-rose-500 text-white border-rose-500'
                     : 'bg-white border-gray-300 text-gray-700 hover:bg-rose-100'}
                 `}
+                aria-pressed={role === 'protocolo'}
+                aria-label="Selecionar acesso Protocolo"
               >
                 Protocolo
               </button>
@@ -83,21 +88,33 @@ const HomePage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">Senha</label>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-600 mb-1">Senha</label>
             <input
+              id="password"
+              name="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-rose-400 focus:outline-none"
+              className={`w-full px-4 py-2 border rounded-lg bg-white focus:ring-2 focus:outline-none transition
+                ${error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-rose-400'}`}
               required
+              aria-invalid={!!error}
+              aria-describedby={error ? "error-message" : undefined}
             />
           </div>
+
+          {error && (
+            <p id="error-message" className="text-red-600 text-sm font-medium text-center">
+              {error}
+            </p>
+          )}
 
           <button
             type="submit"
             disabled={!role || !password}
             className="w-full py-2 px-4 bg-rose-500 hover:bg-rose-600 text-white font-semibold rounded-lg transition duration-300 disabled:opacity-50"
+            aria-disabled={!role || !password}
           >
             Entrar
           </button>

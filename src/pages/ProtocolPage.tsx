@@ -309,7 +309,7 @@ const ProtocolPage: React.FC = () => {
       {/* HEADER EM TELA CHEIA */}
       <header className="relative w-full h-60 md:h-72 lg:h-80 shadow-xl overflow-hidden">
         <img
-          src="https://cdn.alboompro.com/5e662dbcc527ae00015f2530_625d7e819f0b810001a20596/large/casamento-camila-e-erica-1-1-min.jpg?v=1"
+          src="/img/couple/casamento-camila-e-erica-1-1-min(1).jpg"
           alt="Segurança e Recepção de Eventos"
           className="absolute inset-0 w-full h-full object-cover object-center scale-105 transition-transform duration-500"
         />
