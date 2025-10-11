@@ -24,7 +24,7 @@ const BackButton: React.FC<{ role: string; onMenuClose?: () => void }> = ({ role
   }
 
   const handleBackClick = () => {
-    navigate(-1);
+    navigate("/protocolo");
     if (onMenuClose) {
       onMenuClose();
     }
@@ -112,6 +112,26 @@ const Header: React.FC<HeaderProps> = ({ role }) => {
           >
             <Book className="w-4 h-4" />
             Protocolo
+          </Link>
+          <Link
+            to="/quiz"
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${
+              location.pathname === '/quiz' ? 'bg-white/30' : 'hover:bg-white/10'
+            } transition-colors w-full text-left`}
+            onClick={() => setIsMenuOpen(false)}
+          >
+            <Book className="w-4 h-4" />
+            Quiz
+          </Link>
+          <Link
+            to="/wall"
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${
+              location.pathname === '/wall' ? 'bg-white/30' : 'hover:bg-white/10'
+            } transition-colors w-full text-left`}
+            onClick={() => setIsMenuOpen(false)}
+          >
+            <Book className="w-4 h-4" />
+            Mensagens
           </Link>
         </>
       )}

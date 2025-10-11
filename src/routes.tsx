@@ -10,6 +10,7 @@ import ProtectedRoute from './components/protectRoute';
 import AdminLayout from './layout/adminlayout';
 import ProtocoloLayout from './layout/protocololayout';
 import GuestLayout from './layout/guestlayout';
+import MessagesShowcase from './pages/messagewall';
 
 
 const router = createBrowserRouter([
@@ -68,6 +69,14 @@ const router = createBrowserRouter([
     element: (
       <GuestLayout>
         <QuizPage />
+      </GuestLayout>
+    ),
+  },
+  {
+    path: '/wall',
+    element: (
+      <GuestLayout>
+        <MessagesShowcase />
       </GuestLayout>
     ),
   },

@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion, Variants } from 'framer-motion';
 import { CountdownTimer } from './count';
+import { Link } from 'react-router-dom';
 
 interface WelcomeScreenProps {
   guestName: string;
@@ -283,15 +284,18 @@ END:VCALENDAR`;
               </motion.button>
               
               {/* Botão de Calendário, agora com um estilo elegante e bem visível */}
-              <motion.button
-                whileHover={prefersReducedMotion ? {} : { scale: 1.05 }}
-                whileTap={prefersReducedMotion ? {} : { scale: 0.97 }}
-                onClick={handleAddToCalendar}
-                className="bg-white/90 text-rose-600 font-semibold px-6 py-3 rounded-full shadow-lg border-2 border-rose-200 transition-all duration-300 ease-in-out
-                            hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-300 relative overflow-hidden sm:px-8 sm:py-3.5 sm:text-lg"
-              >
-                <span className="relative z-10">Adicionar ao Calendário</span>
-              </motion.button>
+              <Link
+  to="/wall"
+  className="
+    relative inline-block px-8 py-3 sm:px-10 sm:py-4
+    font-semibold text-rose-600 bg-white/90 rounded-full border-2 border-rose-200
+    shadow-lg overflow-hidden transition-all duration-300 ease-in-out
+    hover:bg-rose-50 hover:translate-y-[-2px] hover:shadow-2xl
+    focus:outline-none focus:ring-2 focus:ring-rose-300
+  "
+>
+  <span className="relative z-10 text-lg sm:text-xl">💌 Ver Mensagens 💌</span>
+</Link>
             </motion.div>
 
             <p className={`mt-4 text-center text-gray-900 text-sm sm:text-lg font-semibold ${!prefersReducedMotion ? 'animate-pulse' : ''}`}>
